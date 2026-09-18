@@ -30,7 +30,6 @@ import (
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/api/handlers"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/net/http2"
 	"gopkg.in/yaml.v3"
 )
 
@@ -298,10 +297,10 @@ func (s *Server) Start() error {
 
 		tlsConfig := &tls.Config{
 			Certificates: []tls.Certificate{certPair},
-			NextProtos:   []string{"h2", "http/1.1"},
+			NextProtos:   httpServerNextProtos(),
 		}
 		s.server.TLSConfig = tlsConfig
-		if errHTTP2 := http2.ConfigureServer(s.server, &http2.Server{}); errHTTP2 != nil {
+		if errHTTP2 := configureHTTP2IfEnabled(s.server); errHTTP2 != nil {
 			log.Warnf("failed to configure HTTP/2: %v", errHTTP2)
 		}
 		listener = tls.NewListener(listener, tlsConfig)
