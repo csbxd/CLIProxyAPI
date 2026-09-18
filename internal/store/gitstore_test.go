@@ -1,3 +1,5 @@
+//go:build git_store
+
 package store
 
 import (

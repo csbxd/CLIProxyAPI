@@ -1,3 +1,5 @@
+//go:build object_store
+
 package store
 
 import (

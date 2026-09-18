@@ -1,3 +1,5 @@
+//go:build git_store && object_store && postgres_store
+
 package store
 
 import (
