@@ -1,3 +1,5 @@
+//go:build codex_live
+
 // Package live forwards Codex realtime WebRTC session bootstrap requests.
 package live
 

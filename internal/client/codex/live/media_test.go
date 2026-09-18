@@ -1,3 +1,5 @@
+//go:build codex_live
+
 package live
 
 import (
