@@ -365,7 +365,10 @@ func TestClaudeCodeTLSClientHelloCapture(t *testing.T) {
 		t.Skip("CPA_TLS_FP_PROXY is not set")
 	}
 
-	client := NewUtlsHTTPClient(t.Context(), nil, &cliproxyauth.Auth{ProxyURL: proxyURL}, 0)
+	client, errClient := NewFingerprintHTTPClient(t.Context(), nil, &cliproxyauth.Auth{ProxyURL: proxyURL}, FingerprintClaude)
+	if errClient != nil {
+		t.Fatal(errClient)
+	}
 	req, errRequest := http.NewRequestWithContext(t.Context(), http.MethodPost, "https://api.anthropic.com/v1/messages", bytes.NewBufferString(`{"model":"claude-opus-4-6","max_tokens":1,"messages":[{"role":"user","content":"x"}]}`))
 	if errRequest != nil {
 		t.Fatal(errRequest)
@@ -435,7 +438,7 @@ func TestFallbackRoundTripperSelectsProviderFingerprint(t *testing.T) {
 	}
 }
 
-func TestNewUtlsHTTPClientUsesContextRoundTripperForProtectedHost(t *testing.T) {
+func TestFingerprintHTTPClientUsesContextRoundTripperForProtectedHost(t *testing.T) {
 	t.Parallel()
 
 	for _, targetURL := range []string{
@@ -454,7 +457,14 @@ func TestNewUtlsHTTPClientUsesContextRoundTripperForProtectedHost(t *testing.T) 
 				}, nil
 			}))
 
-			client := NewUtlsHTTPClient(ctx, nil, nil, 0)
+			fingerprint := FingerprintClaude
+			if strings.Contains(targetURL, "chatgpt.com") {
+				fingerprint = FingerprintCodex
+			}
+			client, errClient := NewFingerprintHTTPClient(ctx, nil, nil, fingerprint)
+			if errClient != nil {
+				t.Fatal(errClient)
+			}
 			resp, err := client.Get(targetURL)
 			if err != nil {
 				t.Fatalf("client.Get returned error: %v", err)
@@ -466,6 +476,28 @@ func TestNewUtlsHTTPClientUsesContextRoundTripperForProtectedHost(t *testing.T) 
 				t.Fatal("expected context RoundTripper to handle protected host request")
 			}
 		})
+	}
+}
+
+func TestFingerprintHTTPClientSelectsUTLSProfile(t *testing.T) {
+	for _, fingerprint := range []Fingerprint{FingerprintCodex, FingerprintClaude} {
+		// API-key credentials deliberately keep the uTLS backend even with codex_rs.
+		auth := &cliproxyauth.Auth{ProxyURL: "direct", Attributes: map[string]string{"api_key": "fixture"}}
+		client, errClient := NewFingerprintHTTPClient(t.Context(), nil, auth, fingerprint)
+		if errClient != nil {
+			t.Fatal(errClient)
+		}
+		transport, ok := client.Transport.(*fallbackRoundTripper)
+		if !ok {
+			t.Fatalf("profile %d transport = %T", fingerprint, client.Transport)
+		}
+		if fingerprint == FingerprintCodex {
+			if _, ok := transport.chrome.(*utlsRoundTripper); !ok || transport.anthropic != transport.fallback {
+				t.Fatal("Codex profile must select only the ChatGPT uTLS transport")
+			}
+		} else if transport.anthropic == transport.fallback || transport.chrome != transport.fallback {
+			t.Fatal("Claude profile must select only the Anthropic uTLS transport")
+		}
 	}
 }
 

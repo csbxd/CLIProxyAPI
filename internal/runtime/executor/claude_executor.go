@@ -250,6 +250,9 @@ func (e *ClaudeExecutor) HttpRequest(ctx context.Context, auth *cliproxyauth.Aut
 	if err := e.PrepareRequest(httpReq, auth); err != nil {
 		return nil, err
 	}
-	httpClient := helps.NewUtlsHTTPClient(ctx, e.cfg, auth, 0)
+	httpClient, err := helps.NewFingerprintHTTPClient(ctx, e.cfg, auth, helps.FingerprintClaude)
+	if err != nil {
+		return nil, err
+	}
 	return httpClient.Do(httpReq)
 }
