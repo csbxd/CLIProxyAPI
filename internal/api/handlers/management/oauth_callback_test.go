@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 )
 
@@ -21,7 +21,7 @@ func TestPostOAuthCallbackCreatesMissingAuthDir(t *testing.T) {
 	defer CompleteOAuthSession(state)
 
 	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: authDir}, nil)
-	router := gin.New()
+	router := web.New()
 	router.POST("/v0/management/oauth-callback", h.PostOAuthCallback)
 
 	body := `{"provider":"antigravity","redirect_url":"http://localhost:59788/oauth-callback?state=test-antigravity-state&code=test-code"}`
@@ -59,7 +59,7 @@ func TestGetOAuthCallbackWritesPluginProviderCallback(t *testing.T) {
 	defer CompleteOAuthSession(state)
 
 	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: authDir}, nil)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v0/management/oauth-callback", h.GetOAuthCallback)
 
 	req := httptest.NewRequest(http.MethodGet, "/v0/management/oauth-callback?state="+state+"&code=test-code", nil)
@@ -95,7 +95,7 @@ func TestGetOAuthCallbackDoesNotAliasPluginProvider(t *testing.T) {
 	defer CompleteOAuthSession(state)
 
 	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: authDir}, nil)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v0/management/oauth-callback", h.GetOAuthCallback)
 
 	req := httptest.NewRequest(http.MethodGet, "/v0/management/oauth-callback?state="+state+"&code=test-code", nil)

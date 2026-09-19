@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/google/uuid"
 	"github.com/tidwall/gjson"
 )
@@ -49,7 +49,7 @@ func claudeCodeHeader(ctx context.Context, headers http.Header, name string) str
 		return value
 	}
 	if ctx != nil {
-		if ginCtx, ok := ctx.Value("gin").(*gin.Context); ok && ginCtx != nil && ginCtx.Request != nil {
+		if ginCtx, ok := ctx.Value("gin").(*web.Context); ok && ginCtx != nil && ginCtx.Request != nil {
 			return headerValueCaseInsensitive(ginCtx.Request.Header, name)
 		}
 	}

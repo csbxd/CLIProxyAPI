@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	xaiauth "github.com/router-for-me/CLIProxyAPI/v7/internal/auth/xai"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/runtime/executor"
@@ -39,7 +39,7 @@ func TestAPICallUsesRequestProxyURL(t *testing.T) {
 			SDKConfig: sdkconfig.SDKConfig{ProxyURL: "http://127.0.0.1:1"},
 		},
 	}
-	router := gin.New()
+	router := web.New()
 	router.POST("/", h.APICall)
 
 	body := `{"method":"GET","url":"http://upstream.invalid/test","proxy_url":"` + proxyServer.URL + `"}`
@@ -372,7 +372,7 @@ func TestAPICallReplacesTokenInBodyData(t *testing.T) {
 		cfg:         &config.Config{},
 		authManager: manager,
 	}
-	router := gin.New()
+	router := web.New()
 	router.POST("/", h.APICall)
 
 	reqPayload := map[string]any{
@@ -441,7 +441,7 @@ func TestAPICallResolvesMetaToken(t *testing.T) {
 		authManager: manager,
 		tokenStore:  &memoryAuthStore{},
 	}
-	router := gin.New()
+	router := web.New()
 	router.POST("/api/call", h.APICall)
 
 	body := `{"auth_index":"` + authIndex + `","method":"GET","url":"` + server.URL + `/test","header":{"Authorization":"Bearer $TOKEN$"}}`
@@ -709,7 +709,7 @@ func TestAPICallRejectsUnresolvedTokenPlaceholder(t *testing.T) {
 
 			manager := coreauth.NewManager(nil, nil, nil)
 			h := &Handler{cfg: &config.Config{}, authManager: manager}
-			router := gin.New()
+			router := web.New()
 			router.POST("/", h.APICall)
 
 			payload := map[string]any{}
@@ -788,7 +788,7 @@ func TestAPICallReplacesXAIOAuthAccessToken(t *testing.T) {
 	authIndex := xaiAuth.EnsureIndex()
 
 	h := &Handler{cfg: &config.Config{}, authManager: manager}
-	router := gin.New()
+	router := web.New()
 	router.POST("/", h.APICall)
 
 	body := `{"authIndex":"` + authIndex + `","method":"GET","url":"` + upstream.URL + `/billing","header":{"Authorization":"Bearer $TOKEN$","x-xai-token-auth":"xai-grok-cli"}}`
@@ -861,7 +861,7 @@ func TestAPICallRefreshesExpiredXAIOAuthToken(t *testing.T) {
 	authIndex := xaiAuth.EnsureIndex()
 
 	h := &Handler{cfg: &config.Config{}, authManager: manager, tokenStore: store}
-	router := gin.New()
+	router := web.New()
 	router.POST("/", h.APICall)
 
 	body := `{"auth_index":"` + authIndex + `","method":"GET","url":"` + upstream.URL + `/billing","header":{"Authorization":"Bearer $TOKEN$"}}`
@@ -957,7 +957,7 @@ func TestAPICallUsesXAITokenStorageWithoutRefresh(t *testing.T) {
 	authIndex := xaiAuth.EnsureIndex()
 
 	h := &Handler{cfg: &config.Config{}, authManager: manager}
-	router := gin.New()
+	router := web.New()
 	router.POST("/", h.APICall)
 
 	body := `{"authIndex":"` + authIndex + `","method":"GET","url":"` + upstream.URL + `/billing","header":{"Authorization":"Bearer $TOKEN$"}}`
@@ -1017,7 +1017,7 @@ func TestAPICallRefreshesExpiredXAIOAuthToken_RefreshFailure(t *testing.T) {
 	authIndex := xaiAuth.EnsureIndex()
 
 	h := &Handler{cfg: &config.Config{}, authManager: manager}
-	router := gin.New()
+	router := web.New()
 	router.POST("/", h.APICall)
 
 	body := `{"auth_index":"` + authIndex + `","method":"GET","url":"` + upstream.URL + `/billing","header":{"Authorization":"Bearer $TOKEN$"}}`
@@ -1075,7 +1075,7 @@ func TestAPICallEndToEndWithAuthFilesList(t *testing.T) {
 
 	cfg := &config.Config{AuthDir: tempDir}
 	h := &Handler{cfg: cfg, authManager: manager, tokenStore: store}
-	router := gin.New()
+	router := web.New()
 	router.GET("/v0/management/auth-files", h.ListAuthFiles)
 	router.POST("/v0/management/api-call", h.APICall)
 
@@ -1185,7 +1185,7 @@ func TestAPICallPrioritizesStorageAccessTokenOverMetadataIDToken(t *testing.T) {
 	authIndex := xaiAuth.EnsureIndex()
 
 	h := &Handler{cfg: &config.Config{}, authManager: manager}
-	router := gin.New()
+	router := web.New()
 	router.POST("/", h.APICall)
 
 	body := `{"authIndex":"` + authIndex + `","method":"GET","url":"` + upstream.URL + `/billing","header":{"Authorization":"Bearer $TOKEN$"}}`
@@ -1267,7 +1267,7 @@ func TestAPICallConcurrentXAITokenRefresh(t *testing.T) {
 	authIndex := xaiAuth.EnsureIndex()
 
 	h := &Handler{cfg: &config.Config{}, authManager: manager, tokenStore: store}
-	router := gin.New()
+	router := web.New()
 	router.POST("/", h.APICall)
 
 	const concurrency = 8
@@ -1347,7 +1347,7 @@ func TestAPICallReplacesXAIOAuthAccessTokenInData(t *testing.T) {
 	authIndex := xaiAuth.EnsureIndex()
 
 	h := &Handler{cfg: &config.Config{}, authManager: manager}
-	router := gin.New()
+	router := web.New()
 	router.POST("/", h.APICall)
 
 	body := `{"authIndex":"` + authIndex + `","method":"POST","url":"` + upstream.URL + `/probe","data":"{\"token\":\"$TOKEN$\",\"client\":\"grok\"}"}`
@@ -1415,7 +1415,7 @@ func TestAPICallRefreshesWhenOnlyIDTokenPresentWithRefreshToken(t *testing.T) {
 	authIndex := xaiAuth.EnsureIndex()
 
 	h := &Handler{cfg: &config.Config{}, authManager: manager, tokenStore: store}
-	router := gin.New()
+	router := web.New()
 	router.POST("/", h.APICall)
 
 	body := `{"authIndex":"` + authIndex + `","method":"GET","url":"` + upstream.URL + `/billing","header":{"Authorization":"Bearer $TOKEN$"}}`
@@ -1467,7 +1467,7 @@ func TestAPICallRejectsWhenOnlyIDTokenPresentWithoutRefreshToken(t *testing.T) {
 	authIndex := xaiAuth.EnsureIndex()
 
 	h := &Handler{cfg: &config.Config{}, authManager: manager}
-	router := gin.New()
+	router := web.New()
 	router.POST("/", h.APICall)
 
 	body := `{"authIndex":"` + authIndex + `","method":"GET","url":"` + upstream.URL + `/billing","header":{"Authorization":"Bearer $TOKEN$"}}`

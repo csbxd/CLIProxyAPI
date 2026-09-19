@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/util"
 )
@@ -21,7 +21,7 @@ func init() {
 			if meta := logging.GetClientRequestMetadata(ctx); meta.SessionID != "" {
 				return meta.SessionID
 			}
-			if ginCtx, ok := ctx.Value("gin").(*gin.Context); ok && ginCtx != nil && ginCtx.Request != nil {
+			if ginCtx, ok := ctx.Value("gin").(*web.Context); ok && ginCtx != nil && ginCtx.Request != nil {
 				if util.HasExplicitSessionID(ginCtx.Request.Context()) {
 					return ""
 				}
@@ -31,7 +31,7 @@ func init() {
 				if clientHeaders == nil {
 					clientHeaders = ginCtx.Request.Header
 				}
-			} else if ginCtx, ok := ctx.(*gin.Context); ok && ginCtx != nil && ginCtx.Request != nil {
+			} else if ginCtx, ok := ctx.(*web.Context); ok && ginCtx != nil && ginCtx.Request != nil {
 				if util.HasExplicitSessionID(ginCtx.Request.Context()) {
 					return ""
 				}

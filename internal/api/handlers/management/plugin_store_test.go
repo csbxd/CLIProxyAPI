@@ -17,7 +17,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/pluginstore"
 )
@@ -44,7 +44,7 @@ func TestListPluginStoreMergesInstalledStatus(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
+	c, _ := web.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodGet, "/v0/management/plugin-store", nil)
 
 	h.ListPluginStore(c)
@@ -136,7 +136,7 @@ func TestListPluginStoreUsesVersionFromInstalledFilename(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
+	c, _ := web.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodGet, "/v0/management/plugin-store", nil)
 
 	h.ListPluginStore(c)
@@ -194,7 +194,7 @@ func TestListPluginStoreUsesConfiguredStoreVersionWhenFilesCoexist(t *testing.T)
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
+	c, _ := web.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodGet, "/v0/management/plugin-store", nil)
 
 	h.ListPluginStore(c)
@@ -247,7 +247,7 @@ func TestListPluginStoreEscapesRegistryStrings(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
+	c, _ := web.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodGet, "/v0/management/plugin-store", nil)
 
 	h.ListPluginStore(c)
@@ -305,7 +305,7 @@ func TestListPluginStoreShowsLatestReleaseVersionAndCaches(t *testing.T) {
 
 	listOnce := func() pluginStoreListResponse {
 		rec := httptest.NewRecorder()
-		c, _ := gin.CreateTestContext(rec)
+		c, _ := web.CreateTestContext(rec)
 		c.Request = httptest.NewRequest(http.MethodGet, "/v0/management/plugin-store", nil)
 		h.ListPluginStore(c)
 		if rec.Code != http.StatusOK {
@@ -351,7 +351,7 @@ func TestListPluginStoreFallsBackToRegistryVersion(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
+	c, _ := web.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodGet, "/v0/management/plugin-store", nil)
 
 	h.ListPluginStore(c)
@@ -400,7 +400,7 @@ func TestListPluginStoreIncludesThirdPartySources(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
+	c, _ := web.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodGet, "/v0/management/plugin-store", nil)
 
 	h.ListPluginStore(c)
@@ -465,7 +465,7 @@ func TestListPluginStoreMatchesInstalledStatusToManifestSource(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
+	c, _ := web.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodGet, "/v0/management/plugin-store", nil)
 	h.ListPluginStore(c)
 
@@ -539,8 +539,8 @@ func TestInstallPluginFromStoreRejectsImplicitSourceSwitch(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-	c.Params = gin.Params{{Key: "id", Value: "sample-provider"}}
+	c, _ := web.CreateTestContext(rec)
+	c.Params = web.Params{{Key: "id", Value: "sample-provider"}}
 	communitySourceID := pluginstore.SourceID(communityURL)
 	c.Request = httptest.NewRequest(http.MethodPost, "/v0/management/plugin-store/sample-provider/install?source="+communitySourceID, nil)
 	h.InstallPluginFromStore(c)
@@ -574,8 +574,8 @@ func TestInstallPluginFromStoreRejectsUnknownManagedSource(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-	c.Params = gin.Params{{Key: "id", Value: "sample-provider"}}
+	c, _ := web.CreateTestContext(rec)
+	c.Params = web.Params{{Key: "id", Value: "sample-provider"}}
 	c.Request = httptest.NewRequest(http.MethodPost, "/v0/management/plugin-store/sample-provider/install", nil)
 	h.InstallPluginFromStore(c)
 
@@ -611,7 +611,7 @@ func TestListPluginStoreIncludesDirectMetadataAndAuth(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
+	c, _ := web.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodGet, "/v0/management/plugin-store", nil)
 
 	h.ListPluginStore(c)
@@ -663,7 +663,7 @@ func TestListPluginStoreReportsVersionArtifactAuth(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
+	c, _ := web.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodGet, "/v0/management/plugin-store", nil)
 
 	h.ListPluginStore(c)
@@ -707,7 +707,7 @@ func TestListPluginStoreReportsGitHubMetadataAuth(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
+	c, _ := web.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodGet, "/v0/management/plugin-store", nil)
 
 	h.ListPluginStore(c)
@@ -744,8 +744,8 @@ func TestInstallPluginFromStoreRejectsUnresolvedPluginsDir(t *testing.T) {
 		pluginStoreHTTPClient:  fakePluginStoreHTTPClient{},
 	}
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-	c.Params = gin.Params{{Key: "id", Value: "sample-provider"}}
+	c, _ := web.CreateTestContext(rec)
+	c.Params = web.Params{{Key: "id", Value: "sample-provider"}}
 	c.Request = httptest.NewRequest(http.MethodPost, "/v0/management/plugin-store/sample-provider/install", nil)
 
 	h.InstallPluginFromStore(c)
@@ -808,8 +808,8 @@ plugins:
 	reloads, reloadDone := captureConfigReload(h)
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-	c.Params = gin.Params{{Key: "id", Value: "sample-provider"}}
+	c, _ := web.CreateTestContext(rec)
+	c.Params = web.Params{{Key: "id", Value: "sample-provider"}}
 	c.Request = httptest.NewRequest(http.MethodPost, "/v0/management/plugin-store/sample-provider/install", nil)
 
 	h.InstallPluginFromStore(c)
@@ -894,8 +894,8 @@ func TestInstallPluginFromStoreInstallsDirectArtifact(t *testing.T) {
 	reloads, reloadDone := captureConfigReload(h)
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-	c.Params = gin.Params{{Key: "id", Value: "sample-provider"}}
+	c, _ := web.CreateTestContext(rec)
+	c.Params = web.Params{{Key: "id", Value: "sample-provider"}}
 	c.Request = httptest.NewRequest(http.MethodPost, "/v0/management/plugin-store/sample-provider/install", nil)
 
 	h.InstallPluginFromStore(c)
@@ -957,8 +957,8 @@ func TestInstallPluginFromStoreHonorsDirectQueryVersion(t *testing.T) {
 	reloads, reloadDone := captureConfigReload(h)
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-	c.Params = gin.Params{{Key: "id", Value: "sample-provider"}}
+	c, _ := web.CreateTestContext(rec)
+	c.Params = web.Params{{Key: "id", Value: "sample-provider"}}
 	c.Request = httptest.NewRequest(http.MethodPost, "/v0/management/plugin-store/sample-provider/install?version=0.3.0", nil)
 
 	h.InstallPluginFromStore(c)
@@ -1025,8 +1025,8 @@ func TestInstallPluginFromStoreUsesRequestedThirdPartySource(t *testing.T) {
 	reloads, reloadDone := captureConfigReload(h)
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-	c.Params = gin.Params{{Key: "id", Value: "sample-provider"}}
+	c, _ := web.CreateTestContext(rec)
+	c.Params = web.Params{{Key: "id", Value: "sample-provider"}}
 	communitySourceID := pluginstore.SourceID("https://community.example/registry.json")
 	c.Request = httptest.NewRequest(http.MethodPost, "/v0/management/plugin-store/sample-provider/install?source="+communitySourceID, nil)
 
@@ -1080,8 +1080,8 @@ func TestInstallPluginFromStoreRequiresSourceForDuplicateIDs(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-	c.Params = gin.Params{{Key: "id", Value: "sample-provider"}}
+	c, _ := web.CreateTestContext(rec)
+	c.Params = web.Params{{Key: "id", Value: "sample-provider"}}
 	c.Request = httptest.NewRequest(http.MethodPost, "/v0/management/plugin-store/sample-provider/install", nil)
 
 	h.InstallPluginFromStore(c)
@@ -1136,8 +1136,8 @@ func TestInstallPluginFromStoreOverwritesFilePreservesConfigAndReloads(t *testin
 	reloads, reloadDone := captureConfigReload(h)
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-	c.Params = gin.Params{{Key: "id", Value: "sample-provider"}}
+	c, _ := web.CreateTestContext(rec)
+	c.Params = web.Params{{Key: "id", Value: "sample-provider"}}
 	c.Request = httptest.NewRequest(http.MethodPost, "/v0/management/plugin-store/sample-provider/install", nil)
 
 	h.InstallPluginFromStore(c)

@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 )
@@ -61,7 +61,7 @@ func TestDeleteAuthFile_UsesAuthPathFromManager(t *testing.T) {
 	h.tokenStore = &memoryAuthStore{}
 
 	deleteRec := httptest.NewRecorder()
-	deleteCtx, _ := gin.CreateTestContext(deleteRec)
+	deleteCtx, _ := web.CreateTestContext(deleteRec)
 	deleteReq := httptest.NewRequest(http.MethodDelete, "/v0/management/auth-files?name="+url.QueryEscape(fileName), nil)
 	deleteCtx.Request = deleteReq
 	h.DeleteAuthFile(deleteCtx)
@@ -77,7 +77,7 @@ func TestDeleteAuthFile_UsesAuthPathFromManager(t *testing.T) {
 	}
 
 	listRec := httptest.NewRecorder()
-	listCtx, _ := gin.CreateTestContext(listRec)
+	listCtx, _ := web.CreateTestContext(listRec)
 	listReq := httptest.NewRequest(http.MethodGet, "/v0/management/auth-files", nil)
 	listCtx.Request = listReq
 	h.ListAuthFiles(listCtx)
@@ -113,7 +113,7 @@ func TestDeleteAuthFile_FallbackToAuthDirPath(t *testing.T) {
 	h.tokenStore = &memoryAuthStore{}
 
 	deleteRec := httptest.NewRecorder()
-	deleteCtx, _ := gin.CreateTestContext(deleteRec)
+	deleteCtx, _ := web.CreateTestContext(deleteRec)
 	deleteReq := httptest.NewRequest(http.MethodDelete, "/v0/management/auth-files?name="+url.QueryEscape(fileName), nil)
 	deleteCtx.Request = deleteReq
 	h.DeleteAuthFile(deleteCtx)
@@ -158,7 +158,7 @@ func TestDeleteAuthFile_RemovesRuntimeAuth(t *testing.T) {
 	h.tokenStore = &memoryAuthStore{}
 
 	deleteRec := httptest.NewRecorder()
-	deleteCtx, _ := gin.CreateTestContext(deleteRec)
+	deleteCtx, _ := web.CreateTestContext(deleteRec)
 	deleteReq := httptest.NewRequest(http.MethodDelete, "/v0/management/auth-files?name="+url.QueryEscape(fileName), nil)
 	deleteCtx.Request = deleteReq
 	h.DeleteAuthFile(deleteCtx)

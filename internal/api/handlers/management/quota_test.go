@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 )
@@ -46,7 +46,7 @@ func TestResetQuota_UsesAuthIndex(t *testing.T) {
 	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: t.TempDir()}, manager)
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodPost, "/v0/management/reset-quota", strings.NewReader(`{"auth_index":"`+authIndex+`"}`))
 	req.Header.Set("Content-Type", "application/json")
 	ctx.Request = req
@@ -120,7 +120,7 @@ func TestResetQuota_DoesNotAcceptAuthIDOrFileName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			rec := httptest.NewRecorder()
-			ctx, _ := gin.CreateTestContext(rec)
+			ctx, _ := web.CreateTestContext(rec)
 			req := httptest.NewRequest(http.MethodPost, "/v0/management/reset-quota", strings.NewReader(tt.body))
 			req.Header.Set("Content-Type", "application/json")
 			ctx.Request = req

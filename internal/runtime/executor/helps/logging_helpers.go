@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/util"
@@ -125,7 +125,7 @@ func RecordAPIRequest(ctx context.Context, cfg *config.Config, info UpstreamRequ
 	}
 }
 
-func deferAPIRequest(ginCtx *gin.Context, info UpstreamRequestLog) {
+func deferAPIRequest(ginCtx *web.Context, info UpstreamRequestLog) {
 	if ginCtx == nil {
 		return
 	}
@@ -429,12 +429,12 @@ func RecordAPIWebsocketError(ctx context.Context, cfg *config.Config, stage stri
 	appendAPIWebsocketTimeline(ginCtx, []byte(builder.String()))
 }
 
-func ginContextFrom(ctx context.Context) *gin.Context {
-	ginCtx, _ := ctx.Value("gin").(*gin.Context)
+func ginContextFrom(ctx context.Context) *web.Context {
+	ginCtx, _ := ctx.Value("gin").(*web.Context)
 	return ginCtx
 }
 
-func getAttempts(ginCtx *gin.Context) []*upstreamAttempt {
+func getAttempts(ginCtx *web.Context) []*upstreamAttempt {
 	if ginCtx == nil {
 		return nil
 	}
@@ -446,7 +446,7 @@ func getAttempts(ginCtx *gin.Context) []*upstreamAttempt {
 	return nil
 }
 
-func ensureAttempt(ginCtx *gin.Context) ([]*upstreamAttempt, *upstreamAttempt) {
+func ensureAttempt(ginCtx *web.Context) ([]*upstreamAttempt, *upstreamAttempt) {
 	attempts := getAttempts(ginCtx)
 	if len(attempts) == 0 {
 		attempt := &upstreamAttempt{
@@ -471,7 +471,7 @@ func ensureAttempt(ginCtx *gin.Context) ([]*upstreamAttempt, *upstreamAttempt) {
 	return attempts, attempts[len(attempts)-1]
 }
 
-func ensureResponseIntro(ginCtx *gin.Context, attempt *upstreamAttempt) {
+func ensureResponseIntro(ginCtx *web.Context, attempt *upstreamAttempt) {
 	if attempt == nil || attempt.response == nil || attempt.responseIntroWritten {
 		return
 	}
@@ -492,7 +492,7 @@ func ensureResponseIntro(ginCtx *gin.Context, attempt *upstreamAttempt) {
 	attempt.responseIntroWritten = true
 }
 
-func writeAttemptResponse(ginCtx *gin.Context, attempt *upstreamAttempt, payload []byte) {
+func writeAttemptResponse(ginCtx *web.Context, attempt *upstreamAttempt, payload []byte) {
 	if attempt == nil || len(payload) == 0 {
 		return
 	}
@@ -524,7 +524,7 @@ func writeAttemptResponse(ginCtx *gin.Context, attempt *upstreamAttempt, payload
 	attempt.response.Write(payload)
 }
 
-func updateAggregatedRequest(ginCtx *gin.Context, attempts []*upstreamAttempt) {
+func updateAggregatedRequest(ginCtx *web.Context, attempts []*upstreamAttempt) {
 	if ginCtx == nil {
 		return
 	}
@@ -535,14 +535,14 @@ func updateAggregatedRequest(ginCtx *gin.Context, attempts []*upstreamAttempt) {
 	ginCtx.Set(apiRequestKey, []byte(builder.String()))
 }
 
-func updateAggregatedResponseIfMemoryBacked(ginCtx *gin.Context, attempts []*upstreamAttempt) {
+func updateAggregatedResponseIfMemoryBacked(ginCtx *web.Context, attempts []*upstreamAttempt) {
 	if apiResponseSourceOrNil(ginCtx) != nil {
 		return
 	}
 	updateAggregatedResponse(ginCtx, attempts)
 }
 
-func updateAggregatedResponse(ginCtx *gin.Context, attempts []*upstreamAttempt) {
+func updateAggregatedResponse(ginCtx *web.Context, attempts []*upstreamAttempt) {
 	if ginCtx == nil {
 		return
 	}
@@ -563,11 +563,11 @@ func updateAggregatedResponse(ginCtx *gin.Context, attempts []*upstreamAttempt) 
 	ginCtx.Set(apiResponseKey, []byte(builder.String()))
 }
 
-func apiRequestSource(ginCtx *gin.Context) (*logging.FileBodySource, bool) {
+func apiRequestSource(ginCtx *web.Context) (*logging.FileBodySource, bool) {
 	return fileBodySourceFromGin(ginCtx, logging.APIRequestSourceContextKey)
 }
 
-func apiResponseSourceOrNil(ginCtx *gin.Context) *logging.FileBodySource {
+func apiResponseSourceOrNil(ginCtx *web.Context) *logging.FileBodySource {
 	source, ok := fileBodySourceFromGin(ginCtx, logging.APIResponseSourceContextKey)
 	if !ok {
 		return nil
@@ -575,7 +575,7 @@ func apiResponseSourceOrNil(ginCtx *gin.Context) *logging.FileBodySource {
 	return source
 }
 
-func appendAPIWebsocketTimeline(ginCtx *gin.Context, chunk []byte) {
+func appendAPIWebsocketTimeline(ginCtx *web.Context, chunk []byte) {
 	if ginCtx == nil {
 		return
 	}
@@ -606,11 +606,11 @@ func appendAPIWebsocketTimeline(ginCtx *gin.Context, chunk []byte) {
 	ginCtx.Set(apiWebsocketTimelineKey, bytes.Clone(data))
 }
 
-func apiWebsocketTimelineSource(ginCtx *gin.Context) (*logging.FileBodySource, bool) {
+func apiWebsocketTimelineSource(ginCtx *web.Context) (*logging.FileBodySource, bool) {
 	return fileBodySourceFromGin(ginCtx, logging.APIWebsocketTimelineSourceContextKey)
 }
 
-func fileBodySourceFromGin(ginCtx *gin.Context, key string) (*logging.FileBodySource, bool) {
+func fileBodySourceFromGin(ginCtx *web.Context, key string) (*logging.FileBodySource, bool) {
 	if ginCtx == nil {
 		return nil, false
 	}
@@ -622,7 +622,7 @@ func fileBodySourceFromGin(ginCtx *gin.Context, key string) (*logging.FileBodySo
 	return source, ok && source != nil
 }
 
-func markAPIResponseTimestamp(ginCtx *gin.Context) {
+func markAPIResponseTimestamp(ginCtx *web.Context) {
 	if ginCtx == nil {
 		return
 	}

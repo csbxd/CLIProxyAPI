@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/client/grokbuild"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/home"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
@@ -203,7 +203,7 @@ func TestGrokModelsPreferHomeOverRegistry(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer test-key")
 	req.Header.Set("User-Agent", "grok-shell/0.2.119")
 	recorder := httptest.NewRecorder()
-	ginContext, _ := gin.CreateTestContext(recorder)
+	ginContext, _ := web.CreateTestContext(recorder)
 	ginContext.Request = req
 	server.handleGrokModels(ginContext)
 	if recorder.Code != http.StatusServiceUnavailable {

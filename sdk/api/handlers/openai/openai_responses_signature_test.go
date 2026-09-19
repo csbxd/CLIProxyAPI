@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/api/handlers"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
@@ -15,7 +15,7 @@ import (
 )
 
 func TestOpenAIResponsesForwardsInvalidReasoningEncryptedContentToExecutor(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	executor := &compactCaptureExecutor{}
 	manager := coreauth.NewManager(nil, nil, nil)
 	manager.RegisterExecutor(executor)
@@ -31,7 +31,7 @@ func TestOpenAIResponsesForwardsInvalidReasoningEncryptedContentToExecutor(t *te
 
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.POST("/v1/responses", h.Responses)
 
 	body := `{"model":"test-signature-model","stream":false,"input":[{"id":"rs_bad","type":"reasoning","encrypted_content":"gAAAAABqFTIa\u2026abc","summary":[]}]}`
@@ -49,7 +49,7 @@ func TestOpenAIResponsesForwardsInvalidReasoningEncryptedContentToExecutor(t *te
 }
 
 func TestOpenAIResponsesCompactForwardsInvalidReasoningEncryptedContentToExecutor(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	executor := &compactCaptureExecutor{}
 	manager := coreauth.NewManager(nil, nil, nil)
 	manager.RegisterExecutor(executor)
@@ -65,7 +65,7 @@ func TestOpenAIResponsesCompactForwardsInvalidReasoningEncryptedContentToExecuto
 
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.POST("/v1/responses/compact", h.Compact)
 
 	body := `{"model":"test-signature-compact-model","input":[{"id":"rs_bad","type":"reasoning","encrypted_content":"bad","summary":[]}]}`

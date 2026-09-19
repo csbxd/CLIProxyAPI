@@ -30,7 +30,7 @@ import (
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 )
 
 const (
@@ -920,7 +920,7 @@ func applyClaudeHeadersWithNativeProfile(
 	r.Header.Set("Content-Type", "application/json")
 
 	if incomingHeaders == nil {
-		if ginCtx, ok := r.Context().Value("gin").(*gin.Context); ok && ginCtx != nil && ginCtx.Request != nil {
+		if ginCtx, ok := r.Context().Value("gin").(*web.Context); ok && ginCtx != nil && ginCtx.Request != nil {
 			incomingHeaders = ginCtx.Request.Header
 		}
 	}

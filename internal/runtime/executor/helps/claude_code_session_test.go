@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 )
 
 func TestExtractClaudeCodeSessionIDFromPayloadJSON(t *testing.T) {
@@ -19,7 +19,7 @@ func TestExtractClaudeCodeSessionIDFromPayloadJSON(t *testing.T) {
 
 func TestExtractClaudeCodeSessionIDFromHeader(t *testing.T) {
 	recorder := httptest.NewRecorder()
-	ginCtx, _ := gin.CreateTestContext(recorder)
+	ginCtx, _ := web.CreateTestContext(recorder)
 	ginCtx.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
 	ginCtx.Request.Header.Set(ClaudeCodeSessionHeader, "header-session-1")
 	ctx := context.WithValue(context.Background(), "gin", ginCtx)

@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/auth/devin"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
@@ -65,7 +65,7 @@ func TestDevinRemoteOAuthFlow(t *testing.T) {
 	newDevinOAuthService = func(*config.Config) devinOAuthService { return service }
 	t.Cleanup(func() { newDevinOAuthService = originalFactory })
 
-	router := gin.New()
+	router := web.New()
 	router.GET("/devin-auth-url", h.RequestDevinToken)
 	router.POST("/oauth-callback", h.PostOAuthCallback)
 	router.GET("/get-auth-status", h.GetAuthStatus)

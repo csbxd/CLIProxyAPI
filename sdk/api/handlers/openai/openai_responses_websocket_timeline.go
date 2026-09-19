@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/gorilla/websocket"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/interfaces"
 	requestlogging "github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
@@ -54,7 +54,7 @@ func newInMemoryWebsocketTimelineLog() *websocketTimelineLog {
 	}
 }
 
-func websocketTimelineSourceFromContext(c *gin.Context) *requestlogging.FileBodySource {
+func websocketTimelineSourceFromContext(c *web.Context) *requestlogging.FileBodySource {
 	if c == nil {
 		return nil
 	}
@@ -110,7 +110,7 @@ func (l *websocketTimelineLog) Append(eventType string, payload []byte, timestam
 	}
 }
 
-func (l *websocketTimelineLog) SetContext(c *gin.Context) {
+func (l *websocketTimelineLog) SetContext(c *web.Context) {
 	if l == nil || !l.enabled {
 		return
 	}
@@ -262,11 +262,11 @@ func responsesWebsocketErrorMessageFromPayload(payload []byte) *interfaces.Error
 	return &interfaces.ErrorMessage{StatusCode: status, Error: fmt.Errorf("%s", http.StatusText(status))}
 }
 
-func setWebsocketTimelineBody(c *gin.Context, body string) {
+func setWebsocketTimelineBody(c *web.Context, body string) {
 	setWebsocketBody(c, wsTimelineBodyKey, body)
 }
 
-func setWebsocketBody(c *gin.Context, key string, body string) {
+func setWebsocketBody(c *web.Context, key string, body string) {
 	if c == nil {
 		return
 	}
@@ -325,7 +325,7 @@ func formatWebsocketTimelineEvent(eventType string, payload []byte, timestamp ti
 	return []byte(builder.String())
 }
 
-func markAPIResponseTimestamp(c *gin.Context) {
+func markAPIResponseTimestamp(c *web.Context) {
 	if c == nil {
 		return
 	}

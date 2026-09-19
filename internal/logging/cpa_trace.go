@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 )
 
 // CPATraceIDHeader is the downstream response header used to correlate requests with selected credentials.
@@ -47,7 +47,7 @@ func (s *cpaTraceState) get() string {
 	return traceID
 }
 
-func ginCPATraceState(c *gin.Context) *cpaTraceState {
+func ginCPATraceState(c *web.Context) *cpaTraceState {
 	if c == nil {
 		return nil
 	}
@@ -62,7 +62,7 @@ func ginCPATraceState(c *gin.Context) *cpaTraceState {
 }
 
 // GinCPATraceIDCallback returns a callback that is safe to invoke after the Gin context is released.
-func GinCPATraceIDCallback(c *gin.Context) func(string) {
+func GinCPATraceIDCallback(c *web.Context) func(string) {
 	state := ginCPATraceState(c)
 	if state == nil {
 		return nil
@@ -83,14 +83,14 @@ func GinCPATraceIDCallback(c *gin.Context) func(string) {
 }
 
 // SetGinCPATraceID stores the trace ID until the downstream response headers are committed.
-func SetGinCPATraceID(c *gin.Context, authIndex string) {
+func SetGinCPATraceID(c *web.Context, authIndex string) {
 	if callback := GinCPATraceIDCallback(c); callback != nil {
 		callback(authIndex)
 	}
 }
 
 // GetGinCPATraceID returns the trace ID stored for the current request.
-func GetGinCPATraceID(c *gin.Context) string {
+func GetGinCPATraceID(c *web.Context) string {
 	if c == nil {
 		return ""
 	}
@@ -103,8 +103,8 @@ func GetGinCPATraceID(c *gin.Context) string {
 }
 
 // CPATraceIDMiddleware injects a stored trace ID immediately before response headers are committed.
-func CPATraceIDMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
+func CPATraceIDMiddleware() web.HandlerFunc {
+	return func(c *web.Context) {
 		state := ginCPATraceState(c)
 		c.Writer = &cpaTraceResponseWriter{ResponseWriter: c.Writer, state: state}
 		c.Next()
@@ -112,7 +112,7 @@ func CPATraceIDMiddleware() gin.HandlerFunc {
 }
 
 type cpaTraceResponseWriter struct {
-	gin.ResponseWriter
+	web.ResponseWriter
 	state *cpaTraceState
 }
 

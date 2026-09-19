@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/gorilla/websocket"
 	multiagentv2 "github.com/router-for-me/CLIProxyAPI/v7/internal/client/codex/optimize-multi-agent-v2"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
@@ -27,7 +27,7 @@ func TestPrepareCodexMultiAgentV2ToolsAtResponsesBoundary(t *testing.T) {
 	handler := NewOpenAIResponsesAPIHandler(base)
 	request := httptest.NewRequest(http.MethodPost, "/v1/responses", nil)
 	request.Header.Set("User-Agent", "codex_cli_rs/0.144.1")
-	ginContext, _ := gin.CreateTestContext(httptest.NewRecorder())
+	ginContext, _ := web.CreateTestContext(httptest.NewRecorder())
 	ginContext.Request = request
 
 	payload := []byte(`{
@@ -59,7 +59,7 @@ func TestResponsesPreparesCodexMultiAgentV2ToolsForHTTPAndSSE(t *testing.T) {
 		t.Run(fmt.Sprintf("stream=%t", stream), func(t *testing.T) {
 			executor := &responsesMultiAgentCaptureExecutor{}
 			handler, modelID := newResponsesMultiAgentTestHandler(t, executor)
-			router := gin.New()
+			router := web.New()
 			router.POST("/v1/responses", handler.Responses)
 
 			payload := fmt.Sprintf(`{"model":%q,"stream":%t,"tools":[{"type":"namespace","name":"collaboration","tools":[{"type":"function","name":"spawn_agent","description":"Spawns an agent.","parameters":{"properties":{"message":{"encrypted":true}}}}]}]}`, modelID, stream)
@@ -128,7 +128,7 @@ func newResponsesMultiAgentTestHandler(t *testing.T, executor *responsesMultiAge
 }
 
 func TestResponsesWebsocketPreparesCodexMultiAgentV2Tools(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	executor := &websocketDirectCaptureExecutor{provider: "codex"}
 	manager := coreauth.NewManager(nil, nil, nil)
 	manager.RegisterExecutor(executor)
@@ -144,7 +144,7 @@ func TestResponsesWebsocketPreparesCodexMultiAgentV2Tools(t *testing.T) {
 
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{CodexOptimizeMultiAgentV2: true}, manager)
 	handler := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses", handler.ResponsesWebsocket)
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -184,7 +184,7 @@ func TestPrepareCodexMultiAgentV2ToolsAtResponsesBoundarySkipsOtherClients(t *te
 	handler := NewOpenAIResponsesAPIHandler(base)
 	request := httptest.NewRequest(http.MethodPost, "/v1/responses", nil)
 	request.Header.Set("User-Agent", "curl/8.7.1")
-	ginContext, _ := gin.CreateTestContext(httptest.NewRecorder())
+	ginContext, _ := web.CreateTestContext(httptest.NewRecorder())
 	ginContext.Request = request
 
 	payload := []byte(`{"tools":[{"type":"function","name":"send_message","parameters":{"properties":{"message":{"encrypted":true}}}}]}`)
@@ -224,7 +224,7 @@ func TestResponsesOrphanCodexDelegationCompatibility(t *testing.T) {
 	executor := &responsesMultiAgentCaptureExecutor{}
 	handler, modelID := newResponsesOrphanDelegationTestHandler(t, executor)
 
-	router := gin.New()
+	router := web.New()
 	router.POST("/v1/responses", handler.Responses)
 
 	payload := fmt.Sprintf(`{

@@ -7,13 +7,13 @@ import (
 	"io"
 	"strings"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/klauspost/compress/zstd"
 )
 
 // ReadRequestBody reads the incoming request body and decodes supported
 // Content-Encoding values before handlers inspect JSON fields.
-func ReadRequestBody(c *gin.Context) ([]byte, error) {
+func ReadRequestBody(c *web.Context) ([]byte, error) {
 	raw, err := c.GetRawData()
 	if err != nil {
 		return nil, err

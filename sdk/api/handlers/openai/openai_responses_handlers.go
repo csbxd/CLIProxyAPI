@@ -17,7 +17,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/client/codex/optimize-multi-agent-v2"
 	. "github.com/router-for-me/CLIProxyAPI/v7/internal/constant"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/interfaces"
@@ -483,14 +483,14 @@ func (h *OpenAIResponsesAPIHandler) Models() []map[string]any {
 // OpenAIResponsesModels handles the /v1/models endpoint.
 // It returns a list of available AI models with their capabilities
 // and specifications in OpenAIResponses-compatible format.
-func (h *OpenAIResponsesAPIHandler) OpenAIResponsesModels(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
+func (h *OpenAIResponsesAPIHandler) OpenAIResponsesModels(c *web.Context) {
+	c.JSON(http.StatusOK, web.H{
 		"object": "list",
 		"data":   h.Models(),
 	})
 }
 
-func (h *OpenAIResponsesAPIHandler) prepareCodexMultiAgentV2Tools(c *gin.Context, payload []byte) []byte {
+func (h *OpenAIResponsesAPIHandler) prepareCodexMultiAgentV2Tools(c *web.Context, payload []byte) []byte {
 	if h == nil || h.Cfg == nil {
 		return payload
 	}
@@ -519,7 +519,7 @@ func (h *OpenAIResponsesAPIHandler) prepareCodexMultiAgentV2Tools(c *gin.Context
 	return updated
 }
 
-func (h *OpenAIResponsesAPIHandler) prepareCodexOrphanDelegation(c *gin.Context, payload []byte) []byte {
+func (h *OpenAIResponsesAPIHandler) prepareCodexOrphanDelegation(c *web.Context, payload []byte) []byte {
 	if h == nil || h.Cfg == nil || !h.Cfg.CodexOrphanDelegationCompatibility {
 		return payload
 	}
@@ -539,7 +539,7 @@ func (h *OpenAIResponsesAPIHandler) prepareCodexOrphanDelegation(c *gin.Context,
 //
 // Parameters:
 //   - c: The Gin context containing the HTTP request and response
-func (h *OpenAIResponsesAPIHandler) Responses(c *gin.Context) {
+func (h *OpenAIResponsesAPIHandler) Responses(c *web.Context) {
 	rawJSON, err := handlers.ReadRequestBody(c)
 	// If data retrieval fails, return a 400 Bad Request error.
 	if err != nil {
@@ -565,7 +565,7 @@ func (h *OpenAIResponsesAPIHandler) Responses(c *gin.Context) {
 
 }
 
-func (h *OpenAIResponsesAPIHandler) Compact(c *gin.Context) {
+func (h *OpenAIResponsesAPIHandler) Compact(c *web.Context) {
 	rawJSON, err := handlers.ReadRequestBody(c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, handlers.ErrorResponse{
@@ -618,7 +618,7 @@ func (h *OpenAIResponsesAPIHandler) Compact(c *gin.Context) {
 // Parameters:
 //   - c: The Gin context containing the HTTP request and response
 //   - rawJSON: The raw JSON bytes of the OpenAIResponses-compatible request
-func (h *OpenAIResponsesAPIHandler) handleNonStreamingResponse(c *gin.Context, rawJSON []byte) {
+func (h *OpenAIResponsesAPIHandler) handleNonStreamingResponse(c *web.Context, rawJSON []byte) {
 	c.Header("Content-Type", "application/json")
 
 	modelName := gjson.GetBytes(rawJSON, "model").String()
@@ -644,7 +644,7 @@ func (h *OpenAIResponsesAPIHandler) handleNonStreamingResponse(c *gin.Context, r
 // Parameters:
 //   - c: The Gin context containing the HTTP request and response
 //   - rawJSON: The raw JSON bytes of the OpenAIResponses-compatible request
-func (h *OpenAIResponsesAPIHandler) handleStreamingResponse(c *gin.Context, rawJSON []byte) {
+func (h *OpenAIResponsesAPIHandler) handleStreamingResponse(c *web.Context, rawJSON []byte) {
 	// Get the http.Flusher interface to manually flush the response.
 	flusher, ok := c.Writer.(http.Flusher)
 	if !ok {
@@ -782,7 +782,7 @@ func (h *OpenAIResponsesAPIHandler) handleStreamingResponse(c *gin.Context, rawJ
 }
 
 // isCodexResponsesClientRequest limits the alternate terminal event to official Codex clients.
-func isCodexResponsesClientRequest(c *gin.Context) bool {
+func isCodexResponsesClientRequest(c *web.Context) bool {
 	if c == nil || c.Request == nil {
 		return false
 	}
@@ -943,7 +943,7 @@ func sanitizeResponsesStreamErrorMessage(errMsg *interfaces.ErrorMessage) *inter
 	return &safe
 }
 
-func (h *OpenAIResponsesAPIHandler) logResponsesStreamError(c *gin.Context, framer *responsesSSEFramer, errMsg *interfaces.ErrorMessage) {
+func (h *OpenAIResponsesAPIHandler) logResponsesStreamError(c *web.Context, framer *responsesSSEFramer, errMsg *interfaces.ErrorMessage) {
 	if errMsg == nil {
 		return
 	}
@@ -962,7 +962,7 @@ func (h *OpenAIResponsesAPIHandler) logResponsesStreamError(c *gin.Context, fram
 	})
 }
 
-func (h *OpenAIResponsesAPIHandler) forwardResponsesStream(c *gin.Context, flusher http.Flusher, cancel func(error), data <-chan []byte, errs <-chan *interfaces.ErrorMessage, framer *responsesSSEFramer) {
+func (h *OpenAIResponsesAPIHandler) forwardResponsesStream(c *web.Context, flusher http.Flusher, cancel func(error), data <-chan []byte, errs <-chan *interfaces.ErrorMessage, framer *responsesSSEFramer) {
 	if framer == nil {
 		framer = &responsesSSEFramer{}
 	}

@@ -21,12 +21,12 @@ import (
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 )
 
 func resolveIncomingClaudeHeaders(ctx context.Context, incoming http.Header) http.Header {
 	resolved := make(http.Header)
-	if ginCtx, ok := ctx.Value("gin").(*gin.Context); ok && ginCtx != nil && ginCtx.Request != nil {
+	if ginCtx, ok := ctx.Value("gin").(*web.Context); ok && ginCtx != nil && ginCtx.Request != nil {
 		resolved = ginCtx.Request.Header.Clone()
 	}
 	for key, values := range incoming {
@@ -42,7 +42,7 @@ func detectIncomingClaudeCodeRequest(ctx context.Context, incoming http.Header, 
 
 // getWorkloadFromContext extracts workload identifier from the gin request headers.
 func getWorkloadFromContext(ctx context.Context) string {
-	if ginCtx, ok := ctx.Value("gin").(*gin.Context); ok && ginCtx != nil && ginCtx.Request != nil {
+	if ginCtx, ok := ctx.Value("gin").(*web.Context); ok && ginCtx != nil && ginCtx.Request != nil {
 		return strings.TrimSpace(ginCtx.GetHeader("X-CPA-Claude-Workload"))
 	}
 	return ""

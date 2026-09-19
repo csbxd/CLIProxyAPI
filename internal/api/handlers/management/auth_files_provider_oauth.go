@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/auth/antigravity"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/auth/claude"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/auth/codex"
@@ -34,7 +34,7 @@ type codexOAuthService interface {
 	CreateTokenStorage(bundle *codex.CodexAuthBundle) *codex.CodexTokenStorage
 }
 
-func (h *Handler) RequestAnthropicToken(c *gin.Context) {
+func (h *Handler) RequestAnthropicToken(c *web.Context) {
 	ctx := context.Background()
 	ctx = PopulateAuthContext(ctx, c)
 
@@ -44,7 +44,7 @@ func (h *Handler) RequestAnthropicToken(c *gin.Context) {
 	pkceCodes, err := claude.GeneratePKCECodes()
 	if err != nil {
 		log.Errorf("Failed to generate PKCE codes: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate PKCE codes"})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "failed to generate PKCE codes"})
 		return
 	}
 
@@ -52,7 +52,7 @@ func (h *Handler) RequestAnthropicToken(c *gin.Context) {
 	state, err := misc.GenerateRandomState()
 	if err != nil {
 		log.Errorf("Failed to generate state parameter: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate state parameter"})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "failed to generate state parameter"})
 		return
 	}
 
@@ -63,7 +63,7 @@ func (h *Handler) RequestAnthropicToken(c *gin.Context) {
 	authURL, state, err := anthropicAuth.GenerateAuthURL(state, pkceCodes)
 	if err != nil {
 		log.Errorf("Failed to generate authorization URL: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate authorization url"})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "failed to generate authorization url"})
 		return
 	}
 
@@ -75,13 +75,13 @@ func (h *Handler) RequestAnthropicToken(c *gin.Context) {
 		targetURL, errTarget := h.managementCallbackURL("/anthropic/callback")
 		if errTarget != nil {
 			log.WithError(errTarget).Error("failed to compute anthropic callback target")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "callback server unavailable"})
+			c.JSON(http.StatusInternalServerError, web.H{"error": "callback server unavailable"})
 			return
 		}
 		var errStart error
 		if forwarder, errStart = startCallbackForwarder(anthropicCallbackPort, "anthropic", targetURL); errStart != nil {
 			log.WithError(errStart).Error("failed to start anthropic callback forwarder")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to start callback server"})
+			c.JSON(http.StatusInternalServerError, web.H{"error": "failed to start callback server"})
 			return
 		}
 	}
@@ -192,10 +192,10 @@ func (h *Handler) RequestAnthropicToken(c *gin.Context) {
 		CompleteOAuthSession(state)
 	}()
 
-	c.JSON(200, gin.H{"status": "ok", "url": authURL, "state": state})
+	c.JSON(200, web.H{"status": "ok", "url": authURL, "state": state})
 }
 
-func (h *Handler) RequestCodexToken(c *gin.Context) {
+func (h *Handler) RequestCodexToken(c *web.Context) {
 	ctx := context.Background()
 	ctx = PopulateAuthContext(ctx, c)
 
@@ -205,7 +205,7 @@ func (h *Handler) RequestCodexToken(c *gin.Context) {
 	pkceCodes, err := codex.GeneratePKCECodes()
 	if err != nil {
 		log.Errorf("Failed to generate PKCE codes: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate PKCE codes"})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "failed to generate PKCE codes"})
 		return
 	}
 
@@ -213,7 +213,7 @@ func (h *Handler) RequestCodexToken(c *gin.Context) {
 	state, err := misc.GenerateRandomState()
 	if err != nil {
 		log.Errorf("Failed to generate state parameter: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate state parameter"})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "failed to generate state parameter"})
 		return
 	}
 
@@ -224,7 +224,7 @@ func (h *Handler) RequestCodexToken(c *gin.Context) {
 	authURL, err := openaiAuth.GenerateAuthURL(state, pkceCodes)
 	if err != nil {
 		log.Errorf("Failed to generate authorization URL: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate authorization url"})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "failed to generate authorization url"})
 		return
 	}
 
@@ -236,13 +236,13 @@ func (h *Handler) RequestCodexToken(c *gin.Context) {
 		targetURL, errTarget := h.managementCallbackURL("/codex/callback")
 		if errTarget != nil {
 			log.WithError(errTarget).Error("failed to compute codex callback target")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "callback server unavailable"})
+			c.JSON(http.StatusInternalServerError, web.H{"error": "callback server unavailable"})
 			return
 		}
 		var errStart error
 		if forwarder, errStart = startCallbackForwarder(codexCallbackPort, "codex", targetURL); errStart != nil {
 			log.WithError(errStart).Error("failed to start codex callback forwarder")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to start callback server"})
+			c.JSON(http.StatusInternalServerError, web.H{"error": "failed to start callback server"})
 			return
 		}
 	}
@@ -340,10 +340,10 @@ func (h *Handler) RequestCodexToken(c *gin.Context) {
 		CompleteOAuthSession(state)
 	}()
 
-	c.JSON(200, gin.H{"status": "ok", "url": authURL, "state": state})
+	c.JSON(200, web.H{"status": "ok", "url": authURL, "state": state})
 }
 
-func (h *Handler) RequestAntigravityToken(c *gin.Context) {
+func (h *Handler) RequestAntigravityToken(c *web.Context) {
 	ctx := context.Background()
 	ctx = PopulateAuthContext(ctx, c)
 
@@ -354,7 +354,7 @@ func (h *Handler) RequestAntigravityToken(c *gin.Context) {
 	state, errState := misc.GenerateRandomState()
 	if errState != nil {
 		log.Errorf("Failed to generate state parameter: %v", errState)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate state parameter"})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "failed to generate state parameter"})
 		return
 	}
 
@@ -369,13 +369,13 @@ func (h *Handler) RequestAntigravityToken(c *gin.Context) {
 		targetURL, errTarget := h.managementCallbackURL("/antigravity/callback")
 		if errTarget != nil {
 			log.WithError(errTarget).Error("failed to compute antigravity callback target")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "callback server unavailable"})
+			c.JSON(http.StatusInternalServerError, web.H{"error": "callback server unavailable"})
 			return
 		}
 		var errStart error
 		if forwarder, errStart = startCallbackForwarder(antigravity.CallbackPort, "antigravity", targetURL); errStart != nil {
 			log.WithError(errStart).Error("failed to start antigravity callback forwarder")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to start callback server"})
+			c.JSON(http.StatusInternalServerError, web.H{"error": "failed to start callback server"})
 			return
 		}
 	}
@@ -507,10 +507,10 @@ func (h *Handler) RequestAntigravityToken(c *gin.Context) {
 		fmt.Println("You can now use Antigravity services through this CLI")
 	}()
 
-	c.JSON(200, gin.H{"status": "ok", "url": authURL, "state": state})
+	c.JSON(200, web.H{"status": "ok", "url": authURL, "state": state})
 }
 
-func (h *Handler) RequestXAIToken(c *gin.Context) {
+func (h *Handler) RequestXAIToken(c *web.Context) {
 	ctx := context.Background()
 	ctx = PopulateAuthContext(ctx, c)
 
@@ -522,7 +522,7 @@ func (h *Handler) RequestXAIToken(c *gin.Context) {
 	deviceFlow, errStartDeviceFlow := authSvc.StartDeviceFlow(ctx)
 	if errStartDeviceFlow != nil {
 		log.Errorf("Failed to start xAI device flow: %v", errStartDeviceFlow)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to start device authorization flow"})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "failed to start device authorization flow"})
 		return
 	}
 	authURL := strings.TrimSpace(deviceFlow.VerificationURIComplete)
@@ -611,7 +611,7 @@ func (h *Handler) RequestXAIToken(c *gin.Context) {
 		fmt.Println("You can now use xAI services through this CLI")
 	}()
 
-	response := gin.H{"status": "ok", "url": authURL, "state": state, "flow": "device"}
+	response := web.H{"status": "ok", "url": authURL, "state": state, "flow": "device"}
 	if userCode := strings.TrimSpace(deviceFlow.UserCode); userCode != "" {
 		response["user_code"] = userCode
 	}
@@ -623,7 +623,7 @@ func (h *Handler) RequestXAIToken(c *gin.Context) {
 	c.JSON(200, response)
 }
 
-func (h *Handler) RequestMetaToken(c *gin.Context) {
+func (h *Handler) RequestMetaToken(c *web.Context) {
 	ctx := context.Background()
 	ctx = PopulateAuthContext(ctx, c)
 
@@ -635,7 +635,7 @@ func (h *Handler) RequestMetaToken(c *gin.Context) {
 	deviceFlow, errStartDeviceFlow := authSvc.StartDeviceFlow(ctx)
 	if errStartDeviceFlow != nil {
 		log.Errorf("Failed to start Meta device flow: %v", errStartDeviceFlow)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to start device authorization flow"})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "failed to start device authorization flow"})
 		return
 	}
 	authURL := strings.TrimSpace(deviceFlow.VerificationURIComplete)
@@ -744,7 +744,7 @@ func (h *Handler) RequestMetaToken(c *gin.Context) {
 		fmt.Println("You can now use Meta services through this CLI")
 	}()
 
-	response := gin.H{"status": "ok", "url": authURL, "state": state, "flow": "device"}
+	response := web.H{"status": "ok", "url": authURL, "state": state, "flow": "device"}
 	if userCode := strings.TrimSpace(deviceFlow.UserCode); userCode != "" {
 		response["user_code"] = userCode
 	}
@@ -756,7 +756,7 @@ func (h *Handler) RequestMetaToken(c *gin.Context) {
 	c.JSON(200, response)
 }
 
-func (h *Handler) RequestKimiToken(c *gin.Context) {
+func (h *Handler) RequestKimiToken(c *web.Context) {
 	ctx := context.Background()
 	ctx = PopulateAuthContext(ctx, c)
 
@@ -770,7 +770,7 @@ func (h *Handler) RequestKimiToken(c *gin.Context) {
 	deviceFlow, errStartDeviceFlow := kimiAuth.StartDeviceFlow(ctx)
 	if errStartDeviceFlow != nil {
 		log.Errorf("Failed to generate authorization URL: %v", errStartDeviceFlow)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate authorization url"})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "failed to generate authorization url"})
 		return
 	}
 	authURL := deviceFlow.VerificationURIComplete
@@ -842,7 +842,7 @@ func (h *Handler) RequestKimiToken(c *gin.Context) {
 		CompleteOAuthSession(state)
 	}()
 
-	response := gin.H{"status": "ok", "url": authURL, "state": state, "flow": "device"}
+	response := web.H{"status": "ok", "url": authURL, "state": state, "flow": "device"}
 	if userCode := strings.TrimSpace(deviceFlow.UserCode); userCode != "" {
 		response["user_code"] = userCode
 	}
@@ -875,42 +875,42 @@ func watchOAuthSessionCancel(pollCtx context.Context, cancel context.CancelFunc,
 // CancelAuthSession cancels a pending OAuth session identified by state.
 // Protected by management auth. Safe for both callback and device-code flows:
 // waiters check IsOAuthSessionPending and exit without saving credentials.
-func (h *Handler) CancelAuthSession(c *gin.Context) {
+func (h *Handler) CancelAuthSession(c *web.Context) {
 	state := strings.TrimSpace(c.Query("state"))
 	if state == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "missing state"})
+		c.JSON(http.StatusBadRequest, web.H{"status": "error", "error": "missing state"})
 		return
 	}
 	if err := ValidateOAuthState(state); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "invalid state"})
+		c.JSON(http.StatusBadRequest, web.H{"status": "error", "error": "invalid state"})
 		return
 	}
 	cancelled := CancelOAuthSession(state)
-	c.JSON(http.StatusOK, gin.H{"status": "ok", "cancelled": cancelled})
+	c.JSON(http.StatusOK, web.H{"status": "ok", "cancelled": cancelled})
 }
 
-func (h *Handler) GetAuthStatus(c *gin.Context) {
+func (h *Handler) GetAuthStatus(c *web.Context) {
 	state := strings.TrimSpace(c.Query("state"))
 	if state == "" {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+		c.JSON(http.StatusOK, web.H{"status": "ok"})
 		return
 	}
 	if err := ValidateOAuthState(state); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "invalid state"})
+		c.JSON(http.StatusBadRequest, web.H{"status": "error", "error": "invalid state"})
 		return
 	}
 
 	provider, status, isPlugin, metadata, completed, ok := GetOAuthSessionDetails(state)
 	if !ok {
-		c.JSON(http.StatusOK, gin.H{"status": "error", "error": "unknown or expired state"})
+		c.JSON(http.StatusOK, web.H{"status": "error", "error": "unknown or expired state"})
 		return
 	}
 	if completed {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+		c.JSON(http.StatusOK, web.H{"status": "ok"})
 		return
 	}
 	if status != "" {
-		c.JSON(http.StatusOK, gin.H{"status": "error", "error": status})
+		c.JSON(http.StatusOK, web.H{"status": "error", "error": status})
 		return
 	}
 	h.mu.Lock()
@@ -926,12 +926,12 @@ func (h *Handler) GetAuthStatus(c *gin.Context) {
 					message = "Authentication failed"
 				}
 				SetOAuthSessionError(state, message)
-				c.JSON(http.StatusOK, gin.H{"status": "error", "error": message})
+				c.JSON(http.StatusOK, web.H{"status": "error", "error": message})
 				return
 			}
 			switch resp.Status {
 			case "", pluginapi.AuthLoginStatusPending:
-				c.JSON(http.StatusOK, gin.H{"status": "wait"})
+				c.JSON(http.StatusOK, web.H{"status": "wait"})
 				return
 			case pluginapi.AuthLoginStatusError:
 				message := strings.TrimSpace(resp.Message)
@@ -939,31 +939,31 @@ func (h *Handler) GetAuthStatus(c *gin.Context) {
 					message = "Authentication failed"
 				}
 				SetOAuthSessionError(state, message)
-				c.JSON(http.StatusOK, gin.H{"status": "error", "error": message})
+				c.JSON(http.StatusOK, web.H{"status": "error", "error": message})
 				return
 			case pluginapi.AuthLoginStatusSuccess:
 				records := pluginLoginPollAuths(host, resp)
 				if len(records) == 0 {
 					SetOAuthSessionError(state, "Authentication failed")
-					c.JSON(http.StatusOK, gin.H{"status": "error", "error": "Authentication failed"})
+					c.JSON(http.StatusOK, web.H{"status": "error", "error": "Authentication failed"})
 					return
 				}
 				if errSave := h.savePluginLoginRecords(ctx, records); errSave != nil {
 					log.WithError(errSave).WithField("provider", provider).Error("failed to save plugin auth tokens")
 					SetOAuthSessionError(state, "Failed to save authentication tokens")
-					c.JSON(http.StatusOK, gin.H{"status": "error", "error": "Failed to save authentication tokens"})
+					c.JSON(http.StatusOK, web.H{"status": "error", "error": "Failed to save authentication tokens"})
 					return
 				}
 				CompleteOAuthSession(state)
-				c.JSON(http.StatusOK, gin.H{"status": "ok"})
+				c.JSON(http.StatusOK, web.H{"status": "ok"})
 				return
 			default:
-				c.JSON(http.StatusOK, gin.H{"status": "wait"})
+				c.JSON(http.StatusOK, web.H{"status": "wait"})
 				return
 			}
 		}
 	}
-	c.JSON(http.StatusOK, gin.H{"status": "wait"})
+	c.JSON(http.StatusOK, web.H{"status": "wait"})
 }
 
 func pluginLoginPollAuths(host *pluginhost.Host, resp pluginapi.AuthLoginPollResponse) []*coreauth.Auth {
@@ -1014,7 +1014,7 @@ func (h *Handler) rollbackSavedTokenRecords(ctx context.Context, savedPaths []st
 }
 
 // PopulateAuthContext extracts request info and adds it to the context
-func PopulateAuthContext(ctx context.Context, c *gin.Context) context.Context {
+func PopulateAuthContext(ctx context.Context, c *web.Context) context.Context {
 	info := &coreauth.RequestInfo{
 		Query:   c.Request.URL.Query(),
 		Headers: c.Request.Header,

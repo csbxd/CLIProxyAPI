@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/pluginhost"
@@ -14,9 +14,9 @@ import (
 )
 
 type serverOptionConfig struct {
-	extraMiddleware       []gin.HandlerFunc
-	engineConfigurator    func(*gin.Engine)
-	routerConfigurator    func(*gin.Engine, *handlers.BaseAPIHandler, *config.Config)
+	extraMiddleware       []web.HandlerFunc
+	engineConfigurator    func(*web.Engine)
+	routerConfigurator    func(*web.Engine, *handlers.BaseAPIHandler, *config.Config)
 	requestLoggerFactory  func(*config.Config, string) logging.RequestLogger
 	localPassword         string
 	keepAliveEnabled      bool
@@ -55,21 +55,21 @@ func effectiveSDKConfig(cfg *config.Config) *config.SDKConfig {
 }
 
 // WithMiddleware appends additional Gin middleware during server construction.
-func WithMiddleware(mw ...gin.HandlerFunc) ServerOption {
+func WithMiddleware(mw ...web.HandlerFunc) ServerOption {
 	return func(cfg *serverOptionConfig) {
 		cfg.extraMiddleware = append(cfg.extraMiddleware, mw...)
 	}
 }
 
 // WithEngineConfigurator allows callers to mutate the Gin engine prior to middleware setup.
-func WithEngineConfigurator(fn func(*gin.Engine)) ServerOption {
+func WithEngineConfigurator(fn func(*web.Engine)) ServerOption {
 	return func(cfg *serverOptionConfig) {
 		cfg.engineConfigurator = fn
 	}
 }
 
 // WithRouterConfigurator appends a callback after default routes are registered.
-func WithRouterConfigurator(fn func(*gin.Engine, *handlers.BaseAPIHandler, *config.Config)) ServerOption {
+func WithRouterConfigurator(fn func(*web.Engine, *handlers.BaseAPIHandler, *config.Config)) ServerOption {
 	return func(cfg *serverOptionConfig) {
 		cfg.routerConfigurator = fn
 	}

@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/gorilla/websocket"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
@@ -313,7 +313,7 @@ func multipartBody(boundary, sdp, session string) string {
 }
 
 func TestHandlerRewritesLiveCallAndSchedulesOAuth(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	manager := auth.NewManager(nil, &apiKeyFirstSelector{}, nil)
 	responseBody := &trackedResponseBody{Reader: strings.NewReader("v=0\r\na=ice-lite\r\n")}
@@ -336,7 +336,7 @@ func TestHandlerRewritesLiveCallAndSchedulesOAuth(t *testing.T) {
 	})
 
 	handler := NewHandler(manager, nil)
-	router := gin.New()
+	router := web.New()
 	router.POST("/v1/live", handler.Handle)
 
 	const boundary = "codex-realtime-call-boundary"
@@ -462,7 +462,7 @@ func TestProxyURLForAuthPrefersCredentialOverride(t *testing.T) {
 }
 
 func TestHandlerRelaysWebRTCMediaSDP(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	manager := auth.NewManager(nil, nil, nil)
 	executor := &captureExecutor{
@@ -486,7 +486,7 @@ func TestHandlerRelaysWebRTCMediaSDP(t *testing.T) {
 	runtimeConfig.ProxyURL = "http://global-proxy.example:8080"
 	handler := NewHandler(manager, runtimeConfig)
 	handler.mediaRelay = mediaRelay
-	router := gin.New()
+	router := web.New()
 	router.POST("/v1/live", handler.Handle)
 
 	const boundary = "media-relay-boundary"
@@ -564,7 +564,7 @@ func TestHandlerClosesUnretainedMediaSession(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			gin.SetMode(gin.TestMode)
+			web.SetMode(web.TestMode)
 			manager := auth.NewManager(nil, nil, nil)
 			executor := &captureExecutor{
 				responseBody: &trackedResponseBody{Reader: strings.NewReader("v=0\r\no=upstream-answer\r\n")},
@@ -586,7 +586,7 @@ func TestHandlerClosesUnretainedMediaSession(t *testing.T) {
 				upstreamOffer: "v=0\r\no=gateway-offer\r\n",
 				session:       mediaSession,
 			}
-			router := gin.New()
+			router := web.New()
 			router.POST("/v1/live", handler.Handle)
 
 			const boundary = "media-error-boundary"
@@ -613,7 +613,7 @@ func TestHandlerClosesUnretainedMediaSession(t *testing.T) {
 }
 
 func TestHandlerReleasesHomeSelectionWhenMediaSetupFails(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	manager := auth.NewManager(nil, nil, nil)
 	manager.SetConfig(&config.Config{Home: config.HomeConfig{Enabled: true}})
 	registry := executionregistry.New()
@@ -621,7 +621,7 @@ func TestHandlerReleasesHomeSelectionWhenMediaSetupFails(t *testing.T) {
 	manager.RegisterExecutor(&captureExecutor{})
 	handler := NewHandler(manager, nil)
 	handler.mediaRelay = &fakeMediaRelay{err: errors.New("media setup failed")}
-	router := gin.New()
+	router := web.New()
 	router.POST("/v1/live", handler.Handle)
 
 	const boundary = "home-media-error-boundary"
@@ -643,7 +643,7 @@ func TestHandlerReleasesHomeSelectionWhenMediaSetupFails(t *testing.T) {
 }
 
 func TestHandlerClosesMediaWhenResponseWriteFails(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	manager := auth.NewManager(nil, nil, nil)
 	manager.RegisterExecutor(&captureExecutor{
 		responseBody: &trackedResponseBody{Reader: strings.NewReader("v=0\r\no=upstream-answer\r\n")},
@@ -660,7 +660,7 @@ func TestHandlerClosesMediaWhenResponseWriteFails(t *testing.T) {
 		upstreamOffer: "v=0\r\no=gateway-offer\r\n",
 		session:       mediaSession,
 	}
-	router := gin.New()
+	router := web.New()
 	router.POST("/v1/live", handler.Handle)
 
 	const boundary = "response-write-error-boundary"
@@ -686,7 +686,7 @@ func TestHandlerClosesMediaWhenResponseWriteFails(t *testing.T) {
 
 func TestHandlerForwardsUnauthorizedHomeResponseWithoutRefresh(t *testing.T) {
 	const upstreamError = `{"error":{"message":"access token expired"}}`
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	manager := auth.NewManager(nil, nil, nil)
 	manager.SetConfig(&config.Config{Home: config.HomeConfig{Enabled: true}})
 	registry := executionregistry.New()
@@ -697,7 +697,7 @@ func TestHandlerForwardsUnauthorizedHomeResponseWithoutRefresh(t *testing.T) {
 	}
 	manager.RegisterExecutor(executor)
 	handler := NewHandler(manager, nil)
-	router := gin.New()
+	router := web.New()
 	router.POST("/v1/live", handler.Handle)
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/live", strings.NewReader(`{"model":"gpt-live-1-codex","sdp":"v=0"}`))
@@ -754,7 +754,7 @@ func TestHandlerReportsUnauthorizedBeforeEarlyReturn(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			gin.SetMode(gin.TestMode)
+			web.SetMode(web.TestMode)
 			authID := "home-codex-live-" + strings.ReplaceAll(test.name, " ", "-")
 			runtimeConfig := &config.Config{
 				Home:      config.HomeConfig{Enabled: true},
@@ -774,9 +774,9 @@ func TestHandlerReportsUnauthorizedBeforeEarlyReturn(t *testing.T) {
 			manager.RegisterExecutor(executor)
 			usageCapture := registerHomeUnauthorizedUsageCapture(t, t.Name(), authID)
 			handler := NewHandler(manager, runtimeConfig)
-			router := gin.New()
+			router := web.New()
 			var apiResponse []byte
-			router.Use(func(c *gin.Context) {
+			router.Use(func(c *web.Context) {
 				c.Next()
 				if raw, exists := c.Get("API_RESPONSE"); exists {
 					apiResponse, _ = raw.([]byte)
@@ -804,7 +804,7 @@ func TestHandlerReportsUnauthorizedBeforeEarlyReturn(t *testing.T) {
 }
 
 func TestHandlerUsesLiveModelForHomeDispatch(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	manager := auth.NewManager(nil, nil, nil)
 	manager.SetConfig(&config.Config{Home: config.HomeConfig{Enabled: true}})
@@ -816,7 +816,7 @@ func TestHandlerUsesLiveModelForHomeDispatch(t *testing.T) {
 	manager.RegisterExecutor(executor)
 
 	handler := NewHandler(manager, nil)
-	router := gin.New()
+	router := web.New()
 	router.POST("/v1/live", handler.Handle)
 
 	const boundary = "home-live-boundary"
@@ -851,7 +851,7 @@ func TestHandlerUsesLiveModelForHomeDispatch(t *testing.T) {
 }
 
 func TestHomeLiveSessionExpiryReleasesSelection(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	manager := auth.NewManager(nil, nil, nil)
 	manager.SetConfig(&config.Config{Home: config.HomeConfig{Enabled: true}})
@@ -863,7 +863,7 @@ func TestHomeLiveSessionExpiryReleasesSelection(t *testing.T) {
 
 	handler := NewHandler(manager, nil)
 	handler.sessions.lifetime = 20 * time.Millisecond
-	router := gin.New()
+	router := web.New()
 	router.POST("/v1/live", handler.Handle)
 
 	const boundary = "expiring-home-live-boundary"
@@ -895,7 +895,7 @@ func TestHomeLiveSessionExpiryReleasesSelection(t *testing.T) {
 }
 
 func TestHandleSidebandPinsAuthAndRelaysBidirectionally(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	upstreamHeaders := make(chan http.Header, 1)
 	upstreamServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
@@ -933,7 +933,7 @@ func TestHandleSidebandPinsAuthAndRelaysBidirectionally(t *testing.T) {
 	handler := NewHandler(manager, nil)
 	handler.sidebandAPIBaseURL = "ws" + strings.TrimPrefix(upstreamServer.URL, "http") + "/v1"
 	handler.sessions.put("call-sideband", liveSession{authID: "pinned-oauth", model: defaultLiveModel})
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/live/:call_id", handler.HandleSideband)
 	downstreamServer := httptest.NewServer(router)
 	defer downstreamServer.Close()
@@ -982,7 +982,7 @@ func TestHandleSidebandPinsAuthAndRelaysBidirectionally(t *testing.T) {
 }
 
 func TestHandleSidebandForwardsUnauthorizedHomeHandshakeWithoutRefresh(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	for _, tc := range []struct {
 		name         string
 		upstreamBody string
@@ -1018,7 +1018,7 @@ func TestHandleSidebandForwardsUnauthorizedHomeHandshakeWithoutRefresh(t *testin
 			handler := NewHandler(manager, nil)
 			handler.sidebandAPIBaseURL = "ws" + strings.TrimPrefix(upstreamServer.URL, "http") + "/v1"
 			handler.sessions.put("call-home-refresh", liveSession{authID: "home-codex-live", model: defaultLiveModel, homeSelection: selection})
-			router := gin.New()
+			router := web.New()
 			router.GET("/v1/live/:call_id", handler.HandleSideband)
 			downstreamServer := httptest.NewServer(router)
 			defer downstreamServer.Close()
@@ -1051,9 +1051,9 @@ func TestHandleSidebandForwardsUnauthorizedHomeHandshakeWithoutRefresh(t *testin
 
 func TestHandleSidebandDialErrorPreservesBodyReturnedWithReadError(t *testing.T) {
 	const upstreamError = `{"error":{"message":"access token expired"}}`
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 	c.Request = httptest.NewRequest(http.MethodGet, "/v1/live/call-123", nil)
 	ctx := context.WithValue(c.Request.Context(), "gin", c)
 	response := &http.Response{
@@ -1075,9 +1075,9 @@ func TestHandleSidebandDialErrorPreservesBodyReturnedWithReadError(t *testing.T)
 
 func TestHandleSidebandDialErrorDoesNotForwardNonUnauthorizedBody(t *testing.T) {
 	const upstreamError = `<html>proxy-01.internal authentication failed</html>`
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 	c.Request = httptest.NewRequest(http.MethodGet, "/v1/live/call-123", nil)
 	ctx := context.WithValue(c.Request.Context(), "gin", c)
 	response := &http.Response{

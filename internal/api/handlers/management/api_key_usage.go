@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 )
 
@@ -55,9 +55,9 @@ func apiKeyUsageProviderKey(auth *coreauth.Auth) string {
 
 // GetAPIKeyUsage returns recent request buckets for all in-memory api_key auths,
 // grouped by provider and keyed by "base_url|api_key".
-func (h *Handler) GetAPIKeyUsage(c *gin.Context) {
+func (h *Handler) GetAPIKeyUsage(c *web.Context) {
 	if h == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "handler not initialized"})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "handler not initialized"})
 		return
 	}
 
@@ -65,7 +65,7 @@ func (h *Handler) GetAPIKeyUsage(c *gin.Context) {
 	manager := h.authManager
 	h.mu.Unlock()
 	if manager == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "core auth manager unavailable"})
+		c.JSON(http.StatusServiceUnavailable, web.H{"error": "core auth manager unavailable"})
 		return
 	}
 

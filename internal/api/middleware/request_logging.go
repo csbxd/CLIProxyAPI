@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/klauspost/compress/zstd"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/util"
@@ -28,8 +28,8 @@ const (
 // It captures detailed information about the request and response, including headers and body,
 // and uses the provided RequestLogger to record this data. When full request logging is disabled,
 // large and unknown-size bodies are spooled to disk and retained only for error logs.
-func RequestLoggingMiddleware(logger logging.RequestLogger) gin.HandlerFunc {
-	return func(c *gin.Context) {
+func RequestLoggingMiddleware(logger logging.RequestLogger) web.HandlerFunc {
+	return func(c *web.Context) {
 		if logger == nil {
 			c.Next()
 			return
@@ -243,7 +243,7 @@ func (c *deferredRequestBodyCapture) Cleanup() {
 	c.source = nil
 }
 
-func attachRequestLogSources(c *gin.Context, logger logging.RequestLogger, loggerEnabled bool) {
+func attachRequestLogSources(c *web.Context, logger logging.RequestLogger, loggerEnabled bool) {
 	if c == nil || !loggerEnabled {
 		return
 	}
@@ -308,7 +308,7 @@ func shouldCaptureRequestBody(loggerEnabled bool, req *http.Request) bool {
 // captureRequestInfo extracts relevant information from the incoming HTTP request.
 // It captures the URL, method, headers, and body. The request body is read and then
 // restored so that it can be processed by subsequent handlers.
-func captureRequestInfo(c *gin.Context, captureBody bool) (*RequestInfo, error) {
+func captureRequestInfo(c *web.Context, captureBody bool) (*RequestInfo, error) {
 	// Capture URL with sensitive query parameters masked
 	maskedQuery := util.MaskSensitiveQuery(c.Request.URL.RawQuery)
 	url := c.Request.URL.Path

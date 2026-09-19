@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 )
 
@@ -23,7 +23,7 @@ func TestPatchMetaKeyUpdatesExecutionFields(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPatch, "/v0/management/meta-api-key", strings.NewReader(`{
 		"index": 0,
 		"value": {

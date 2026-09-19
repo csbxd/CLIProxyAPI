@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/htmlsanitize"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/pluginhost"
@@ -64,7 +64,7 @@ type pluginMenuInfo struct {
 }
 
 // ListPlugins returns discovered, configured, and registered plugin entries.
-func (h *Handler) ListPlugins(c *gin.Context) {
+func (h *Handler) ListPlugins(c *web.Context) {
 	if h == nil || h.cfg == nil {
 		c.JSON(http.StatusOK, pluginListResponse{
 			PluginsDir: "plugins",
@@ -85,14 +85,14 @@ func (h *Handler) ListPlugins(c *gin.Context) {
 
 	resolvedPluginsDir, errResolvePluginsDir := config.ResolvePluginsDir(pluginsDir)
 	if errResolvePluginsDir != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "plugin_directory_invalid", "message": errResolvePluginsDir.Error()})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "plugin_directory_invalid", "message": errResolvePluginsDir.Error()})
 		return
 	}
 	pluginsDir = resolvedPluginsDir
 	entries := make(map[string]pluginListEntry)
 	files, errDiscover := pluginhost.DiscoverPluginFiles(pluginsDir, pluginStoreDesiredVersions(configs))
 	if errDiscover != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "plugin_discovery_failed", "message": errDiscover.Error()})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "plugin_discovery_failed", "message": errDiscover.Error()})
 		return
 	}
 	for _, file := range files {
@@ -160,20 +160,20 @@ func (h *Handler) ListPlugins(c *gin.Context) {
 }
 
 // GetPluginConfig returns the preserved plugins.configs.<id> object as JSON.
-func (h *Handler) GetPluginConfig(c *gin.Context) {
+func (h *Handler) GetPluginConfig(c *web.Context) {
 	id, okID := pluginIDFromRequest(c)
 	if !okID {
 		return
 	}
 	if h == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "plugin_not_found", "message": "plugin not found"})
+		c.JSON(http.StatusNotFound, web.H{"error": "plugin_not_found", "message": "plugin not found"})
 		return
 	}
 
 	h.mu.Lock()
 	if h.cfg == nil {
 		h.mu.Unlock()
-		c.JSON(http.StatusNotFound, gin.H{"error": "plugin_not_found", "message": "plugin not found"})
+		c.JSON(http.StatusNotFound, web.H{"error": "plugin_not_found", "message": "plugin not found"})
 		return
 	}
 	item, configured := h.cfg.Plugins.Configs[id]
@@ -184,7 +184,7 @@ func (h *Handler) GetPluginConfig(c *gin.Context) {
 	if configured {
 		body, errBody := pluginConfigJSONObject(item)
 		if errBody != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "plugin_config_encode_failed", "message": errBody.Error()})
+			c.JSON(http.StatusInternalServerError, web.H{"error": "plugin_config_encode_failed", "message": errBody.Error()})
 			return
 		}
 		c.JSON(http.StatusOK, body)
@@ -192,29 +192,29 @@ func (h *Handler) GetPluginConfig(c *gin.Context) {
 	}
 
 	if pluginRegistered(host, id) {
-		c.JSON(http.StatusOK, gin.H{})
+		c.JSON(http.StatusOK, web.H{})
 		return
 	}
 	resolvedPluginsDir, errResolvePluginsDir := config.ResolvePluginsDir(pluginsDir)
 	if errResolvePluginsDir != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "plugin_directory_invalid", "message": errResolvePluginsDir.Error()})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "plugin_directory_invalid", "message": errResolvePluginsDir.Error()})
 		return
 	}
 	discovered, errDiscover := pluginDiscovered(resolvedPluginsDir, id)
 	if errDiscover != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "plugin_discovery_failed", "message": errDiscover.Error()})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "plugin_discovery_failed", "message": errDiscover.Error()})
 		return
 	}
 	if discovered {
-		c.JSON(http.StatusOK, gin.H{})
+		c.JSON(http.StatusOK, web.H{})
 		return
 	}
 
-	c.JSON(http.StatusNotFound, gin.H{"error": "plugin_not_found", "message": "plugin not found"})
+	c.JSON(http.StatusNotFound, web.H{"error": "plugin_not_found", "message": "plugin not found"})
 }
 
 // PatchPluginEnabled updates plugins.configs.<id>.enabled without touching plugins.enabled.
-func (h *Handler) PatchPluginEnabled(c *gin.Context) {
+func (h *Handler) PatchPluginEnabled(c *web.Context) {
 	id, okID := pluginIDFromRequest(c)
 	if !okID {
 		return
@@ -223,7 +223,7 @@ func (h *Handler) PatchPluginEnabled(c *gin.Context) {
 		Enabled *bool `json:"enabled"`
 	}
 	if errBindJSON := c.ShouldBindJSON(&body); errBindJSON != nil || body.Enabled == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_body", "message": "enabled is required"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "invalid_body", "message": "enabled is required"})
 		return
 	}
 
@@ -235,7 +235,7 @@ func (h *Handler) PatchPluginEnabled(c *gin.Context) {
 	updated, errConfig := pluginInstanceConfigFromNode(node)
 	if errConfig != nil {
 		h.mu.Unlock()
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_config", "message": errConfig.Error()})
+		c.JSON(http.StatusBadRequest, web.H{"error": "invalid_config", "message": errConfig.Error()})
 		return
 	}
 	h.cfg.Plugins.Configs[id] = updated
@@ -246,11 +246,11 @@ func (h *Handler) PatchPluginEnabled(c *gin.Context) {
 	}
 
 	h.reloadConfigAfterManagementSaveAsync(c.Request.Context(), cfgSnapshot)
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	c.JSON(http.StatusOK, web.H{"status": "ok"})
 }
 
 // PutPluginConfig replaces plugins.configs.<id> with the request object.
-func (h *Handler) PutPluginConfig(c *gin.Context) {
+func (h *Handler) PutPluginConfig(c *web.Context) {
 	id, okID := pluginIDFromRequest(c)
 	if !okID {
 		return
@@ -261,12 +261,12 @@ func (h *Handler) PutPluginConfig(c *gin.Context) {
 	}
 	node, errNode := yamlNodeFromJSONObject(body)
 	if errNode != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_body", "message": errNode.Error()})
+		c.JSON(http.StatusBadRequest, web.H{"error": "invalid_body", "message": errNode.Error()})
 		return
 	}
 	updated, errConfig := pluginInstanceConfigFromNode(node)
 	if errConfig != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_config", "message": errConfig.Error()})
+		c.JSON(http.StatusBadRequest, web.H{"error": "invalid_config", "message": errConfig.Error()})
 		return
 	}
 
@@ -278,7 +278,7 @@ func (h *Handler) PutPluginConfig(c *gin.Context) {
 }
 
 // PatchPluginConfig shallow-merges plugins.configs.<id> with the request object.
-func (h *Handler) PatchPluginConfig(c *gin.Context) {
+func (h *Handler) PatchPluginConfig(c *web.Context) {
 	id, okID := pluginIDFromRequest(c)
 	if !okID {
 		return
@@ -305,14 +305,14 @@ func (h *Handler) PatchPluginConfig(c *gin.Context) {
 		}
 		valueNode, errNode := yamlNodeFromJSONValue(value)
 		if errNode != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_body", "message": errNode.Error()})
+			c.JSON(http.StatusBadRequest, web.H{"error": "invalid_body", "message": errNode.Error()})
 			return
 		}
 		setYAMLMappingValue(node, key, valueNode)
 	}
 	updated, errConfig := pluginInstanceConfigFromNode(node)
 	if errConfig != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_config", "message": errConfig.Error()})
+		c.JSON(http.StatusBadRequest, web.H{"error": "invalid_config", "message": errConfig.Error()})
 		return
 	}
 	h.cfg.Plugins.Configs[id] = updated
@@ -320,20 +320,20 @@ func (h *Handler) PatchPluginConfig(c *gin.Context) {
 }
 
 // DeletePlugin removes the selected local plugin file and its saved config.
-func (h *Handler) DeletePlugin(c *gin.Context) {
+func (h *Handler) DeletePlugin(c *web.Context) {
 	id, okID := pluginIDFromRequest(c)
 	if !okID {
 		return
 	}
 	if h == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "plugin_not_found", "message": "plugin not found"})
+		c.JSON(http.StatusNotFound, web.H{"error": "plugin_not_found", "message": "plugin not found"})
 		return
 	}
 
 	h.mu.Lock()
 	if h.cfg == nil {
 		h.mu.Unlock()
-		c.JSON(http.StatusNotFound, gin.H{"error": "plugin_not_found", "message": "plugin not found"})
+		c.JSON(http.StatusNotFound, web.H{"error": "plugin_not_found", "message": "plugin not found"})
 		return
 	}
 	pluginsDir := normalizedPluginsDir(h.cfg.Plugins.Dir)
@@ -343,7 +343,7 @@ func (h *Handler) DeletePlugin(c *gin.Context) {
 
 	resolvedPluginsDir, errResolvePluginsDir := config.ResolvePluginsDir(pluginsDir)
 	if errResolvePluginsDir != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "plugin_directory_invalid", "message": errResolvePluginsDir.Error()})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "plugin_directory_invalid", "message": errResolvePluginsDir.Error()})
 		return
 	}
 	pluginsDir = resolvedPluginsDir
@@ -353,16 +353,16 @@ func (h *Handler) DeletePlugin(c *gin.Context) {
 	}
 	path, errPath := pluginFilePath(pluginsDir, id, desiredVersions)
 	if errPath != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "plugin_discovery_failed", "message": errPath.Error()})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "plugin_discovery_failed", "message": errPath.Error()})
 		return
 	}
 	if path == "" && !configured {
-		c.JSON(http.StatusNotFound, gin.H{"error": "plugin_not_found", "message": "plugin not found"})
+		c.JSON(http.StatusNotFound, web.H{"error": "plugin_not_found", "message": "plugin not found"})
 		return
 	}
 
 	if pluginBusy(host, id) && (host == nil || !host.UnloadPlugin(id)) && pluginBusy(host, id) {
-		c.JSON(http.StatusConflict, gin.H{
+		c.JSON(http.StatusConflict, web.H{
 			"error":            "plugin_delete_requires_restart",
 			"message":          "loaded plugin cannot be deleted while the server is running",
 			"restart_required": true,
@@ -374,7 +374,7 @@ func (h *Handler) DeletePlugin(c *gin.Context) {
 	if path != "" {
 		if errRemove := os.Remove(path); errRemove != nil {
 			if !errors.Is(errRemove, os.ErrNotExist) {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "plugin_delete_failed", "message": errRemove.Error()})
+				c.JSON(http.StatusInternalServerError, web.H{"error": "plugin_delete_failed", "message": errRemove.Error()})
 				return
 			}
 		} else {
@@ -387,7 +387,7 @@ func (h *Handler) DeletePlugin(c *gin.Context) {
 	if configured {
 		if errSave := config.SaveConfigPreserveComments(h.configFilePath, h.cfg); errSave != nil {
 			h.mu.Unlock()
-			c.JSON(http.StatusInternalServerError, gin.H{
+			c.JSON(http.StatusInternalServerError, web.H{
 				"error":        "config_save_failed",
 				"message":      fmt.Sprintf("plugin deleted but saving config failed: %s", errSave.Error()),
 				"file_deleted": fileDeleted,
@@ -400,7 +400,7 @@ func (h *Handler) DeletePlugin(c *gin.Context) {
 	h.mu.Unlock()
 
 	h.reloadConfigAfterManagementSaveAsync(c.Request.Context(), cfgSnapshot)
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, web.H{
 		"status":             "deleted",
 		"id":                 htmlsanitize.String(id),
 		"path":               htmlsanitize.String(path),
@@ -499,25 +499,25 @@ func pluginMetadata(meta pluginapi.Metadata) *pluginMetadataInfo {
 	}
 }
 
-func pluginIDFromRequest(c *gin.Context) (string, bool) {
+func pluginIDFromRequest(c *web.Context) (string, bool) {
 	id := strings.TrimSpace(c.Param("id"))
 	if !pluginhost.ValidatePluginID(id) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_plugin_id", "message": "invalid plugin id"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "invalid_plugin_id", "message": "invalid plugin id"})
 		return "", false
 	}
 	return id, true
 }
 
-func readPluginConfigObject(c *gin.Context) (map[string]any, bool) {
+func readPluginConfigObject(c *web.Context) (map[string]any, bool) {
 	decoder := json.NewDecoder(c.Request.Body)
 	decoder.UseNumber()
 	var body map[string]any
 	if errDecode := decoder.Decode(&body); errDecode != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_body", "message": errDecode.Error()})
+		c.JSON(http.StatusBadRequest, web.H{"error": "invalid_body", "message": errDecode.Error()})
 		return nil, false
 	}
 	if body == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_body", "message": "body must be a JSON object"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "invalid_body", "message": "body must be a JSON object"})
 		return nil, false
 	}
 	return body, true

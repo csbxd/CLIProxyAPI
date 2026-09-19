@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/interfaces"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
@@ -219,9 +219,9 @@ func newInterceptorHandler(t *testing.T, model string, executor *interceptorCapt
 }
 
 func contextWithHeaders(headers http.Header) context.Context {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 	c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
 	for key, values := range headers {
 		for _, value := range values {
@@ -235,9 +235,9 @@ func contextWithHeaders(headers http.Header) context.Context {
 // query parameters, mirroring how plain HTTP requests expose inbound query to
 // queryFromContext.
 func contextWithQuery(query url.Values) context.Context {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 	target := "/v1/chat/completions"
 	if encoded := query.Encode(); encoded != "" {
 		target = target + "?" + encoded
@@ -1660,11 +1660,11 @@ func TestWriteModelListResponse_ExposesResponseToPluginInterceptors(t *testing.T
 	})
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodGet, "/v1/models", nil)
 	ctx.Request.Header.Set("Authorization", "Bearer test-token")
 
-	payload := gin.H{"object": "list", "data": []map[string]any{{"id": "original-model"}}}
+	payload := web.H{"object": "list", "data": []map[string]any{{"id": "original-model"}}}
 	handler.WriteModelListResponse(ctx, "openai", payload)
 
 	if rec.Code != http.StatusOK {

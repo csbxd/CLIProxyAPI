@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/interfaces"
 )
 
@@ -33,9 +33,9 @@ func TestValidateSSEDataJSONAllowsMultilinePayload(t *testing.T) {
 }
 
 func TestForwardStreamNormalizesErrorBeforeWriteAndCancel(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 	c.Request = httptest.NewRequest(http.MethodGet, "/", nil)
 
 	data := make(chan []byte)

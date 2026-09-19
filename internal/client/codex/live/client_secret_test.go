@@ -14,15 +14,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 )
 
 func TestCreateClientSecretMapsStandardRealtimeModel(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	handler := &Handler{clientSecrets: newClientSecretStore()}
-	router := gin.New()
-	router.POST("/v1/realtime/client_secrets", func(c *gin.Context) {
+	router := web.New()
+	router.POST("/v1/realtime/client_secrets", func(c *web.Context) {
 		c.Set("userApiKey", "issuer-key")
 		c.Set("accessProvider", "static")
 		c.Next()
@@ -84,7 +84,7 @@ func TestCreateClientSecretMapsStandardRealtimeModel(t *testing.T) {
 }
 
 func TestStandardRealtimeCallMapsModelAndLocation(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	manager := auth.NewManager(nil, nil, nil)
 	executor := &captureExecutor{responseBody: io.NopCloser(strings.NewReader("v=0\r\n"))}
 	manager.RegisterExecutor(executor)
@@ -97,7 +97,7 @@ func TestStandardRealtimeCallMapsModelAndLocation(t *testing.T) {
 		t.Fatalf("register auth: %v", errRegister)
 	}
 	handler := NewHandler(manager, nil)
-	router := gin.New()
+	router := web.New()
 	router.POST("/v1/realtime/calls", handler.Handle)
 
 	const boundary = "standard-realtime-boundary"
@@ -155,9 +155,9 @@ func TestReadClientSecretBodyRejectsOversizedSession(t *testing.T) {
 }
 
 func TestCreateClientSecretRejectsUnsupportedSessionType(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	handler := &Handler{clientSecrets: newClientSecretStore()}
-	router := gin.New()
+	router := web.New()
 	router.POST("/v1/realtime/client_secrets", handler.CreateClientSecret)
 
 	request := httptest.NewRequest(http.MethodPost, "/v1/realtime/client_secrets", strings.NewReader(`{"session":{"type":"transcription","model":"gpt-4o-transcribe"}}`))
@@ -172,8 +172,8 @@ func TestCreateClientSecretRejectsUnsupportedSessionType(t *testing.T) {
 }
 
 func TestLiveSelectionHeadersRemoveLocalClientSecret(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	ginContext, _ := gin.CreateTestContext(httptest.NewRecorder())
+	web.SetMode(web.TestMode)
+	ginContext, _ := web.CreateTestContext(httptest.NewRecorder())
 	ginContext.Request = httptest.NewRequest(http.MethodPost, "/v1/realtime/calls", nil)
 	ginContext.Request.Header.Set("Authorization", "Bearer ek_secret")
 	ginContext.Request.Header.Set("OpenAI-Safety-Identifier", "safe-user")
@@ -188,15 +188,15 @@ func TestLiveSelectionHeadersRemoveLocalClientSecret(t *testing.T) {
 }
 
 func TestSidebandRejectsClientSecretScopeMismatch(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	handler := NewHandler(auth.NewManager(nil, nil, nil), nil)
 	handler.sessions.put("call-123", liveSession{
 		authID:                "codex-oauth",
 		model:                 defaultLiveModel,
 		clientSecretPrincipal: "sess_expected",
 	})
-	router := gin.New()
-	router.GET("/v1/realtime/calls/:call_id", func(c *gin.Context) {
+	router := web.New()
+	router.GET("/v1/realtime/calls/:call_id", func(c *web.Context) {
 		c.Set(ClientSecretPrincipalContextKey, "sess_other")
 		c.Next()
 	}, handler.HandleSideband)
@@ -216,7 +216,7 @@ func TestSidebandRejectsClientSecretScopeMismatch(t *testing.T) {
 }
 
 func TestSidebandRejectsStandardPrincipalScopeMismatch(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	handler := NewHandler(auth.NewManager(nil, nil, nil), nil)
 	handler.sessions.put("call-123", liveSession{
 		authID:         "codex-oauth",
@@ -224,8 +224,8 @@ func TestSidebandRejectsStandardPrincipalScopeMismatch(t *testing.T) {
 		ownerPrincipal: "owner-key",
 		ownerProvider:  "static",
 	})
-	router := gin.New()
-	router.GET("/v1/realtime/calls/:call_id", func(c *gin.Context) {
+	router := web.New()
+	router.GET("/v1/realtime/calls/:call_id", func(c *web.Context) {
 		c.Set("userApiKey", "other-key")
 		c.Set("accessProvider", "static")
 		c.Next()

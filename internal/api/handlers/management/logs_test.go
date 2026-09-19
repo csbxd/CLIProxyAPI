@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 )
 
@@ -707,7 +707,7 @@ func performGetLogs(t *testing.T, h *Handler, target string) logsAPIResponse {
 func performGetLogsRaw(t *testing.T, h *Handler, target string) (int, string) {
 	t.Helper()
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
+	c, _ := web.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodGet, target, nil)
 	h.GetLogs(c)
 	return rec.Code, rec.Body.String()

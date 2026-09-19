@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/util"
 	log "github.com/sirupsen/logrus"
@@ -127,10 +127,10 @@ func SetupBaseLogger() {
 		log.SetFormatter(&LogFormatter{})
 
 		ginInfoWriter = log.StandardLogger().Writer()
-		gin.DefaultWriter = ginInfoWriter
+		web.DefaultWriter = ginInfoWriter
 		ginErrorWriter = log.StandardLogger().WriterLevel(log.ErrorLevel)
-		gin.DefaultErrorWriter = ginErrorWriter
-		gin.DebugPrintFunc = func(format string, values ...interface{}) {
+		web.DefaultErrorWriter = ginErrorWriter
+		web.DebugPrintFunc = func(format string, values ...interface{}) {
 			format = strings.TrimRight(format, "\r\n")
 			log.StandardLogger().Infof(format, values...)
 		}

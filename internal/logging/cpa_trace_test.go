@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 )
 
 func TestFormatCPATraceID(t *testing.T) {
@@ -35,20 +35,20 @@ func TestFormatCPATraceID(t *testing.T) {
 }
 
 func TestCPATraceIDMiddlewareRequiresAuthIndexBeforeResponseCommit(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	engine := gin.New()
+	web.SetMode(web.TestMode)
+	engine := web.New()
 	engine.Use(CPATraceIDMiddleware())
-	engine.GET("/selected", func(c *gin.Context) {
+	engine.GET("/selected", func(c *web.Context) {
 		SetGinRequestID(c, "1234abcd")
 		SetGinCPATraceID(c, "auth-index")
 		c.Status(http.StatusOK)
 	})
-	engine.GET("/unselected", func(c *gin.Context) {
+	engine.GET("/unselected", func(c *web.Context) {
 		SetGinRequestID(c, "1234abcd")
 		SetGinCPATraceID(c, "")
 		c.Status(http.StatusOK)
 	})
-	engine.GET("/committed", func(c *gin.Context) {
+	engine.GET("/committed", func(c *web.Context) {
 		SetGinRequestID(c, "1234abcd")
 		c.Writer.WriteHeaderNow()
 		SetGinCPATraceID(c, "auth-index")
@@ -87,10 +87,10 @@ func TestCPATraceIDMiddlewareRequiresAuthIndexBeforeResponseCommit(t *testing.T)
 }
 
 func TestCPATraceIDConcurrentSelectionAndResponseCommit(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	engine := gin.New()
+	web.SetMode(web.TestMode)
+	engine := web.New()
 	engine.Use(CPATraceIDMiddleware())
-	engine.GET("/race", func(c *gin.Context) {
+	engine.GET("/race", func(c *web.Context) {
 		SetGinRequestID(c, "1234abcd")
 		traceCallback := GinCPATraceIDCallback(c)
 		start := make(chan struct{})

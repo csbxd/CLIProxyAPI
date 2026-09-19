@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/pluginhost"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
@@ -94,7 +94,7 @@ func TestPatchPluginVirtualAuthStatusReturnsConflictForVirtualChild(t *testing.T
 
 	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: t.TempDir()}, manager)
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/status", strings.NewReader(`{"name":"auth-1","disabled":true}`))
 	req.Header.Set("Content-Type", "application/json")
 	ctx.Request = req
@@ -124,7 +124,7 @@ func TestPatchPluginVirtualSourceStatusDisablesAllExpandedAuths(t *testing.T) {
 
 	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: authDir}, manager)
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/status", strings.NewReader(`{"name":"source.json","disabled":true}`))
 	req.Header.Set("Content-Type", "application/json")
 	ctx.Request = req
@@ -161,7 +161,7 @@ func TestPatchPluginVirtualAuthFieldsReturnsConflict(t *testing.T) {
 
 	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: t.TempDir()}, manager)
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/fields", strings.NewReader(`{"name":"auth-1","note":"hello"}`))
 	req.Header.Set("Content-Type", "application/json")
 	ctx.Request = req
@@ -192,7 +192,7 @@ func TestDeletePluginVirtualSourceRemovesExpandedRuntimeAuths(t *testing.T) {
 	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: authDir}, manager)
 	h.tokenStore = &memoryAuthStore{}
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodDelete, "/v0/management/auth-files?name="+url.QueryEscape(fileName), nil)
 	ctx.Request = req
 
@@ -319,7 +319,7 @@ func TestServePluginAuthURLPassesQueryParamsAsMetadata(t *testing.T) {
 	h.SetPluginHost(host)
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodGet, "/v0/management/custom-sso-auth-url?idc_region=eu-west-1&idc_start_url=https%3A%2F%2Fsso.example.com&scopes=read&scopes=write", nil)
 	ctx.Request = req
 
@@ -347,7 +347,7 @@ func TestServePluginAuthURLPassesQueryParamsAsMetadata(t *testing.T) {
 	// Verify no query parameters passes nil metadata
 	capturedReq = pluginapi.AuthLoginStartRequest{}
 	recNoQuery := httptest.NewRecorder()
-	ctxNoQuery, _ := gin.CreateTestContext(recNoQuery)
+	ctxNoQuery, _ := web.CreateTestContext(recNoQuery)
 	reqNoQuery := httptest.NewRequest(http.MethodGet, "/v0/management/custom-sso-auth-url", nil)
 	ctxNoQuery.Request = reqNoQuery
 

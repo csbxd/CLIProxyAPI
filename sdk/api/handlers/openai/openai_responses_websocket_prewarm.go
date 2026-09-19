@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/google/uuid"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/interfaces"
 	log "github.com/sirupsen/logrus"
@@ -26,7 +26,7 @@ func shouldHandleResponsesWebsocketPrewarmLocally(rawJSON []byte, lastRequest []
 }
 
 func writeResponsesWebsocketSyntheticPrewarm(
-	c *gin.Context,
+	c *web.Context,
 	writer *responsesWebsocketWriter,
 	requestJSON []byte,
 	wsTimelineLog websocketTimelineAppender,

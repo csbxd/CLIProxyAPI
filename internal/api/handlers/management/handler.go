@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/buildinfo"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/pluginhost"
@@ -176,9 +176,9 @@ func (h *Handler) reloadSnapshotConfigLocked() configReloadSnapshot {
 
 // saveConfigAndSnapshotLocked saves h.cfg and returns a full runtime config snapshot.
 // Callers must hold h.mu.
-func (h *Handler) saveConfigAndSnapshotLocked(c *gin.Context) (configReloadSnapshot, bool) {
+func (h *Handler) saveConfigAndSnapshotLocked(c *web.Context) (configReloadSnapshot, bool) {
 	if errSave := config.SaveConfigPreserveComments(h.configFilePath, h.cfg); errSave != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to save config: %v", errSave)})
+		c.JSON(http.StatusInternalServerError, web.H{"error": fmt.Sprintf("failed to save config: %v", errSave)})
 		return configReloadSnapshot{}, false
 	}
 	return h.reloadSnapshotConfigLocked(), true
@@ -263,8 +263,8 @@ func (h *Handler) SetPostAuthPersistHook(hook coreauth.PostAuthHook) {
 // Middleware enforces access control for management endpoints.
 // All requests (local and remote) require a valid management key.
 // Additionally, remote access requires allow-remote-management=true.
-func (h *Handler) Middleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
+func (h *Handler) Middleware() web.HandlerFunc {
+	return func(c *web.Context) {
 		c.Header("X-CPA-VERSION", buildinfo.Version)
 		c.Header("X-CPA-COMMIT", buildinfo.Commit)
 		c.Header("X-CPA-BUILD-DATE", buildinfo.BuildDate)
@@ -289,7 +289,7 @@ func (h *Handler) Middleware() gin.HandlerFunc {
 
 		allowed, statusCode, errMsg := h.AuthenticateManagementKey(clientIP, localClient, provided)
 		if !allowed {
-			c.AbortWithStatusJSON(statusCode, gin.H{"error": errMsg})
+			c.AbortWithStatusJSON(statusCode, web.H{"error": errMsg})
 			return
 		}
 		c.Next()
@@ -398,7 +398,7 @@ func (h *Handler) AuthenticateManagementKey(clientIP string, localClient bool, p
 }
 
 // persist saves the current in-memory config to disk.
-func (h *Handler) persist(c *gin.Context) bool {
+func (h *Handler) persist(c *web.Context) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	return h.persistLocked(c)
@@ -406,14 +406,14 @@ func (h *Handler) persist(c *gin.Context) bool {
 
 // persistLocked saves the current in-memory config to disk.
 // It expects the caller to hold h.mu.
-func (h *Handler) persistLocked(c *gin.Context) bool {
+func (h *Handler) persistLocked(c *web.Context) bool {
 	// Preserve comments when writing
 	if err := config.SaveConfigPreserveComments(h.configFilePath, h.cfg); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to save config: %v", err)})
+		c.JSON(http.StatusInternalServerError, web.H{"error": fmt.Sprintf("failed to save config: %v", err)})
 		return false
 	}
 	snapshot := h.reloadSnapshotConfigLocked()
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	c.JSON(http.StatusOK, web.H{"status": "ok"})
 	var reqCtx context.Context
 	if c != nil && c.Request != nil {
 		reqCtx = c.Request.Context()
@@ -423,36 +423,36 @@ func (h *Handler) persistLocked(c *gin.Context) bool {
 }
 
 // Helper methods for simple types
-func (h *Handler) updateBoolField(c *gin.Context, set func(bool)) {
+func (h *Handler) updateBoolField(c *web.Context, set func(bool)) {
 	var body struct {
 		Value *bool `json:"value"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil || body.Value == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "invalid body"})
 		return
 	}
 	set(*body.Value)
 	h.persist(c)
 }
 
-func (h *Handler) updateIntField(c *gin.Context, set func(int)) {
+func (h *Handler) updateIntField(c *web.Context, set func(int)) {
 	var body struct {
 		Value *int `json:"value"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil || body.Value == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "invalid body"})
 		return
 	}
 	set(*body.Value)
 	h.persist(c)
 }
 
-func (h *Handler) updateStringField(c *gin.Context, set func(string)) {
+func (h *Handler) updateStringField(c *web.Context, set func(string)) {
 	var body struct {
 		Value *string `json:"value"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil || body.Value == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "invalid body"})
 		return
 	}
 	set(*body.Value)

@@ -16,30 +16,30 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/util"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/watcher/synthesizer"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 )
 
 // Download single auth file by name
-func (h *Handler) DownloadAuthFile(c *gin.Context) {
+func (h *Handler) DownloadAuthFile(c *web.Context) {
 	name := strings.TrimSpace(c.Query("name"))
 	if isUnsafeAuthFileName(name) {
-		c.JSON(400, gin.H{"error": "invalid name"})
+		c.JSON(400, web.H{"error": "invalid name"})
 		return
 	}
 	if !strings.HasSuffix(strings.ToLower(name), ".json") {
-		c.JSON(400, gin.H{"error": "name must end with .json"})
+		c.JSON(400, web.H{"error": "name must end with .json"})
 		return
 	}
 	full := filepath.Join(h.cfg.AuthDir, name)
 	data, err := os.ReadFile(full)
 	if err != nil {
 		if os.IsNotExist(err) {
-			c.JSON(404, gin.H{"error": "file not found"})
+			c.JSON(404, web.H{"error": "file not found"})
 		} else {
-			c.JSON(500, gin.H{"error": fmt.Sprintf("failed to read file: %v", err)})
+			c.JSON(500, web.H{"error": fmt.Sprintf("failed to read file: %v", err)})
 		}
 		return
 	}
@@ -48,33 +48,33 @@ func (h *Handler) DownloadAuthFile(c *gin.Context) {
 }
 
 // Upload auth file: multipart or raw JSON with ?name=
-func (h *Handler) UploadAuthFile(c *gin.Context) {
+func (h *Handler) UploadAuthFile(c *web.Context) {
 	if h.authManager == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "core auth manager unavailable"})
+		c.JSON(http.StatusServiceUnavailable, web.H{"error": "core auth manager unavailable"})
 		return
 	}
 	ctx := c.Request.Context()
 
 	fileHeaders, errMultipart := h.multipartAuthFileHeaders(c)
 	if errMultipart != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("invalid multipart form: %v", errMultipart)})
+		c.JSON(http.StatusBadRequest, web.H{"error": fmt.Sprintf("invalid multipart form: %v", errMultipart)})
 		return
 	}
 	if len(fileHeaders) == 1 {
 		if _, errUpload := h.storeUploadedAuthFile(ctx, fileHeaders[0]); errUpload != nil {
 			if errors.Is(errUpload, errAuthFileMustBeJSON) {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "file must be .json"})
+				c.JSON(http.StatusBadRequest, web.H{"error": "file must be .json"})
 				return
 			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": errUpload.Error()})
+			c.JSON(http.StatusInternalServerError, web.H{"error": errUpload.Error()})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+		c.JSON(http.StatusOK, web.H{"status": "ok"})
 		return
 	}
 	if len(fileHeaders) > 1 {
 		uploaded := make([]string, 0, len(fileHeaders))
-		failed := make([]gin.H, 0)
+		failed := make([]web.H, 0)
 		for _, file := range fileHeaders {
 			name, errUpload := h.storeUploadedAuthFile(ctx, file)
 			if errUpload != nil {
@@ -86,13 +86,13 @@ func (h *Handler) UploadAuthFile(c *gin.Context) {
 				if errors.Is(errUpload, errAuthFileMustBeJSON) {
 					msg = "file must be .json"
 				}
-				failed = append(failed, gin.H{"name": failureName, "error": msg})
+				failed = append(failed, web.H{"name": failureName, "error": msg})
 				continue
 			}
 			uploaded = append(uploaded, name)
 		}
 		if len(failed) > 0 {
-			c.JSON(http.StatusMultiStatus, gin.H{
+			c.JSON(http.StatusMultiStatus, web.H{
 				"status":   "partial",
 				"uploaded": len(uploaded),
 				"files":    uploaded,
@@ -100,45 +100,45 @@ func (h *Handler) UploadAuthFile(c *gin.Context) {
 			})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"status": "ok", "uploaded": len(uploaded), "files": uploaded})
+		c.JSON(http.StatusOK, web.H{"status": "ok", "uploaded": len(uploaded), "files": uploaded})
 		return
 	}
 	if c.ContentType() == "multipart/form-data" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "no files uploaded"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "no files uploaded"})
 		return
 	}
 	name := strings.TrimSpace(c.Query("name"))
 	if isUnsafeAuthFileName(name) {
-		c.JSON(400, gin.H{"error": "invalid name"})
+		c.JSON(400, web.H{"error": "invalid name"})
 		return
 	}
 	if !strings.HasSuffix(strings.ToLower(name), ".json") {
-		c.JSON(400, gin.H{"error": "name must end with .json"})
+		c.JSON(400, web.H{"error": "name must end with .json"})
 		return
 	}
 	data, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		c.JSON(400, gin.H{"error": "failed to read body"})
+		c.JSON(400, web.H{"error": "failed to read body"})
 		return
 	}
 	if err = h.writeAuthFile(ctx, filepath.Base(name), data); err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(500, web.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{"status": "ok"})
+	c.JSON(200, web.H{"status": "ok"})
 }
 
 // Delete auth files: single by name or all
-func (h *Handler) DeleteAuthFile(c *gin.Context) {
+func (h *Handler) DeleteAuthFile(c *web.Context) {
 	if h.authManager == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "core auth manager unavailable"})
+		c.JSON(http.StatusServiceUnavailable, web.H{"error": "core auth manager unavailable"})
 		return
 	}
 	ctx := c.Request.Context()
 	if all := c.Query("all"); all == "true" || all == "1" || all == "*" {
 		entries, err := os.ReadDir(h.cfg.AuthDir)
 		if err != nil {
-			c.JSON(500, gin.H{"error": fmt.Sprintf("failed to read auth dir: %v", err)})
+			c.JSON(500, web.H{"error": fmt.Sprintf("failed to read auth dir: %v", err)})
 			return
 		}
 		deleted := 0
@@ -158,47 +158,47 @@ func (h *Handler) DeleteAuthFile(c *gin.Context) {
 			}
 			if err = os.Remove(full); err == nil {
 				if errDel := h.deleteTokenRecord(ctx, full); errDel != nil {
-					c.JSON(500, gin.H{"error": errDel.Error()})
+					c.JSON(500, web.H{"error": errDel.Error()})
 					return
 				}
 				deleted++
 				h.removeAuth(ctx, full)
 			}
 		}
-		c.JSON(200, gin.H{"status": "ok", "deleted": deleted})
+		c.JSON(200, web.H{"status": "ok", "deleted": deleted})
 		return
 	}
 
 	names, errNames := requestedAuthFileNamesForDelete(c)
 	if errNames != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": errNames.Error()})
+		c.JSON(http.StatusBadRequest, web.H{"error": errNames.Error()})
 		return
 	}
 	if len(names) == 0 {
-		c.JSON(400, gin.H{"error": "invalid name"})
+		c.JSON(400, web.H{"error": "invalid name"})
 		return
 	}
 	if len(names) == 1 {
 		if _, status, errDelete := h.deleteAuthFileByName(ctx, names[0]); errDelete != nil {
-			c.JSON(status, gin.H{"error": errDelete.Error()})
+			c.JSON(status, web.H{"error": errDelete.Error()})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+		c.JSON(http.StatusOK, web.H{"status": "ok"})
 		return
 	}
 
 	deletedFiles := make([]string, 0, len(names))
-	failed := make([]gin.H, 0)
+	failed := make([]web.H, 0)
 	for _, name := range names {
 		deletedName, _, errDelete := h.deleteAuthFileByName(ctx, name)
 		if errDelete != nil {
-			failed = append(failed, gin.H{"name": name, "error": errDelete.Error()})
+			failed = append(failed, web.H{"name": name, "error": errDelete.Error()})
 			continue
 		}
 		deletedFiles = append(deletedFiles, deletedName)
 	}
 	if len(failed) > 0 {
-		c.JSON(http.StatusMultiStatus, gin.H{
+		c.JSON(http.StatusMultiStatus, web.H{
 			"status":  "partial",
 			"deleted": len(deletedFiles),
 			"files":   deletedFiles,
@@ -206,10 +206,10 @@ func (h *Handler) DeleteAuthFile(c *gin.Context) {
 		})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"status": "ok", "deleted": len(deletedFiles), "files": deletedFiles})
+	c.JSON(http.StatusOK, web.H{"status": "ok", "deleted": len(deletedFiles), "files": deletedFiles})
 }
 
-func (h *Handler) multipartAuthFileHeaders(c *gin.Context) ([]*multipart.FileHeader, error) {
+func (h *Handler) multipartAuthFileHeaders(c *web.Context) ([]*multipart.FileHeader, error) {
 	if h == nil || c == nil || c.ContentType() != "multipart/form-data" {
 		return nil, nil
 	}
@@ -283,7 +283,7 @@ func (h *Handler) writeAuthFile(ctx context.Context, name string, data []byte) e
 	return nil
 }
 
-func requestedAuthFileNamesForDelete(c *gin.Context) ([]string, error) {
+func requestedAuthFileNamesForDelete(c *web.Context) ([]string, error) {
 	if c == nil {
 		return nil, nil
 	}

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
 	coreexecutor "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/executor"
 	coresession "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/session"
@@ -15,8 +15,8 @@ import (
 )
 
 func TestGetContextWithCancelCapturesClientRequestMetadata(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	ginCtx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	web.SetMode(web.TestMode)
+	ginCtx, _ := web.CreateTestContext(httptest.NewRecorder())
 	ginCtx.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
 	ginCtx.Request.RemoteAddr = "192.0.2.10:43123"
 	ginCtx.Request.Header.Add("X-Forwarded-For", "203.0.113.5")
@@ -52,8 +52,8 @@ func TestRequestExecutionMetadataIncludesExecutionSessionWithoutIdempotencyKey(t
 }
 
 func TestRequestExecutionMetadataIncludesHashedCallerScope(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	ginCtx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	web.SetMode(web.TestMode)
+	ginCtx, _ := web.CreateTestContext(httptest.NewRecorder())
 	ginCtx.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
 	ginCtx.Set("userApiKey", "downstream-secret")
 	ctx := context.WithValue(context.Background(), "gin", ginCtx)
@@ -70,10 +70,10 @@ func TestRequestExecutionMetadataIncludesHashedCallerScope(t *testing.T) {
 }
 
 func TestRequestExecutionMetadataTraceCallbackWebsocketDetection(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	t.Run("skips websocket upgrade", func(t *testing.T) {
-		ginCtx, _ := gin.CreateTestContext(httptest.NewRecorder())
+		ginCtx, _ := web.CreateTestContext(httptest.NewRecorder())
 		ginCtx.Request = httptest.NewRequest(http.MethodGet, "/v1/responses", nil)
 		ginCtx.Request.Header.Set("Connection", "Upgrade")
 		ginCtx.Request.Header.Set("Upgrade", "websocket")
@@ -88,7 +88,7 @@ func TestRequestExecutionMetadataTraceCallbackWebsocketDetection(t *testing.T) {
 	})
 
 	t.Run("keeps callback for incomplete upgrade headers", func(t *testing.T) {
-		ginCtx, _ := gin.CreateTestContext(httptest.NewRecorder())
+		ginCtx, _ := web.CreateTestContext(httptest.NewRecorder())
 		ginCtx.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", nil)
 		ginCtx.Request.Header.Set("Upgrade", "websocket")
 		logging.SetGinRequestID(ginCtx, "1234abcd")

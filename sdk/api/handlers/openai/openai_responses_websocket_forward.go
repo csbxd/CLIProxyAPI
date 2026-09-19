@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/gorilla/websocket"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/clienterror"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/interfaces"
@@ -30,7 +30,7 @@ type responsesWebsocketForwardOptions struct {
 }
 
 func (h *OpenAIResponsesAPIHandler) forwardResponsesWebsocket(
-	c *gin.Context,
+	c *web.Context,
 	writer *responsesWebsocketWriter,
 	cancel handlers.APIHandlerCancelFunc,
 	data <-chan []byte,

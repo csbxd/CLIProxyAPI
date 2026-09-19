@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 )
@@ -35,7 +35,7 @@ type authFilesCooldownResponse struct {
 func requestAuthFilesCooldowns(t *testing.T, h *Handler, query string) authFilesCooldownResponse {
 	t.Helper()
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodGet, "/v0/management/auth-files"+query, nil)
 	h.ListAuthFiles(ctx)
 	if rec.Code != http.StatusOK {

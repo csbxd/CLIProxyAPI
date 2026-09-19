@@ -6,14 +6,14 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 )
 
 // RefreshAuthFiles triggers active refresh for a single auth file or all auth files.
 // Accepts query parameters (?all=true, ?name=file.json) or JSON body ({"all": true, "name": "file.json"}).
-func (h *Handler) RefreshAuthFiles(c *gin.Context) {
+func (h *Handler) RefreshAuthFiles(c *web.Context) {
 	if h.authManager == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "core auth manager unavailable"})
+		c.JSON(http.StatusServiceUnavailable, web.H{"error": "core auth manager unavailable"})
 		return
 	}
 
@@ -24,7 +24,7 @@ func (h *Handler) RefreshAuthFiles(c *gin.Context) {
 	}
 	if c.Request.Body != nil && c.Request.ContentLength != 0 {
 		if errBind := c.ShouldBindJSON(&req); errBind != nil && !errors.Is(errBind, io.EOF) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body: " + errBind.Error()})
+			c.JSON(http.StatusBadRequest, web.H{"error": "invalid request body: " + errBind.Error()})
 			return
 		}
 	}
@@ -42,7 +42,7 @@ func (h *Handler) RefreshAuthFiles(c *gin.Context) {
 
 	if req.All {
 		results := h.authManager.ForceRefreshAll(ctx)
-		c.JSON(http.StatusOK, gin.H{
+		c.JSON(http.StatusOK, web.H{
 			"ok":      true,
 			"results": results,
 		})
@@ -51,25 +51,25 @@ func (h *Handler) RefreshAuthFiles(c *gin.Context) {
 
 	name := strings.TrimSpace(req.Name)
 	if name == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "name or all=true is required"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "name or all=true is required"})
 		return
 	}
 
 	targetAuth, ok := h.lookupAuthFile(name, req.AuthIndex)
 	if !ok || targetAuth == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "auth file not found"})
+		c.JSON(http.StatusNotFound, web.H{"error": "auth file not found"})
 		return
 	}
 
 	refreshed, err := h.authManager.ForceRefreshAuth(ctx, targetAuth.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
+		c.JSON(http.StatusInternalServerError, web.H{
 			"error": err.Error(),
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, web.H{
 		"ok":   true,
 		"auth": refreshed,
 	})

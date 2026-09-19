@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/gorilla/websocket"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/clienterror"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
@@ -309,7 +309,7 @@ const (
 )
 
 // HandleSideband relays live session sideband WebSocket frames bidirectionally.
-func (h *Handler) HandleSideband(c *gin.Context) {
+func (h *Handler) HandleSideband(c *web.Context) {
 	if h == nil || h.authManager == nil || h.sessions == nil {
 		writeLiveError(c, http.StatusServiceUnavailable, "Codex live sideband unavailable")
 		return
@@ -517,7 +517,7 @@ func (h *Handler) HandleSideband(c *gin.Context) {
 	}
 }
 
-func sidebandTarget(c *gin.Context) (sidebandStyle, string, bool) {
+func sidebandTarget(c *web.Context) (sidebandStyle, string, bool) {
 	if c == nil || c.Request == nil || c.Request.URL == nil {
 		return sidebandFrameless, "", false
 	}
@@ -582,7 +582,7 @@ func callIDFromLocation(location string) string {
 	return callID
 }
 
-func handleSidebandDialError(c *gin.Context, ctx context.Context, cfg *config.Config, response *http.Response, errDial error) []byte {
+func handleSidebandDialError(c *web.Context, ctx context.Context, cfg *config.Config, response *http.Response, errDial error) []byte {
 	status := clienterror.HTTPStatusFromErrorOr(errDial, http.StatusBadGateway)
 	var responseBody []byte
 	if response != nil {

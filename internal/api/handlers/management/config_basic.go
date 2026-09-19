@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/util"
 	sdkconfig "github.com/router-for-me/CLIProxyAPI/v7/sdk/config"
@@ -23,9 +23,9 @@ const (
 	latestReleaseUserAgent = "CLIProxyAPI"
 )
 
-func (h *Handler) GetConfig(c *gin.Context) {
+func (h *Handler) GetConfig(c *web.Context) {
 	if h == nil || h.cfg == nil {
-		c.JSON(200, gin.H{})
+		c.JSON(200, web.H{})
 		return
 	}
 	c.JSON(200, new(*h.cfg))
@@ -45,7 +45,7 @@ func setLatestReleaseRequestHeaders(req *http.Request) {
 }
 
 // GetLatestVersion returns the latest release version from GitHub without downloading assets.
-func (h *Handler) GetLatestVersion(c *gin.Context) {
+func (h *Handler) GetLatestVersion(c *web.Context) {
 	client := &http.Client{Timeout: 10 * time.Second}
 	proxyURL := ""
 	if h != nil && h.cfg != nil {
@@ -58,14 +58,14 @@ func (h *Handler) GetLatestVersion(c *gin.Context) {
 
 	req, err := http.NewRequestWithContext(c.Request.Context(), http.MethodGet, latestReleaseURL, nil)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "request_create_failed", "message": err.Error()})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "request_create_failed", "message": err.Error()})
 		return
 	}
 	setLatestReleaseRequestHeaders(req)
 
 	resp, err := client.Do(req)
 	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": "request_failed", "message": err.Error()})
+		c.JSON(http.StatusBadGateway, web.H{"error": "request_failed", "message": err.Error()})
 		return
 	}
 	defer func() {
@@ -76,13 +76,13 @@ func (h *Handler) GetLatestVersion(c *gin.Context) {
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
-		c.JSON(http.StatusBadGateway, gin.H{"error": "unexpected_status", "message": fmt.Sprintf("status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))})
+		c.JSON(http.StatusBadGateway, web.H{"error": "unexpected_status", "message": fmt.Sprintf("status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))})
 		return
 	}
 
 	var info releaseInfo
 	if errDecode := json.NewDecoder(resp.Body).Decode(&info); errDecode != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": "decode_failed", "message": errDecode.Error()})
+		c.JSON(http.StatusBadGateway, web.H{"error": "decode_failed", "message": errDecode.Error()})
 		return
 	}
 
@@ -91,11 +91,11 @@ func (h *Handler) GetLatestVersion(c *gin.Context) {
 		version = strings.TrimSpace(info.Name)
 	}
 	if version == "" {
-		c.JSON(http.StatusBadGateway, gin.H{"error": "invalid_response", "message": "missing release version"})
+		c.JSON(http.StatusBadGateway, web.H{"error": "invalid_response", "message": "missing release version"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"latest-version": version})
+	c.JSON(http.StatusOK, web.H{"latest-version": version})
 }
 
 func WriteConfig(path string, data []byte) error {
@@ -115,34 +115,34 @@ func WriteConfig(path string, data []byte) error {
 	return f.Close()
 }
 
-func (h *Handler) PutConfigYAML(c *gin.Context) {
+func (h *Handler) PutConfigYAML(c *web.Context) {
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_yaml", "message": "cannot read request body"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "invalid_yaml", "message": "cannot read request body"})
 		return
 	}
 	var cfg config.Config
 	if err = yaml.Unmarshal(body, &cfg); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_yaml", "message": err.Error()})
+		c.JSON(http.StatusBadRequest, web.H{"error": "invalid_yaml", "message": err.Error()})
 		return
 	}
 	// Validate config using LoadConfigOptional with optional=false to enforce parsing
 	tmpDir := filepath.Dir(h.configFilePath)
 	tmpFile, err := os.CreateTemp(tmpDir, "config-validate-*.yaml")
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "write_failed", "message": err.Error()})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "write_failed", "message": err.Error()})
 		return
 	}
 	tempFile := tmpFile.Name()
 	if _, errWrite := tmpFile.Write(body); errWrite != nil {
 		_ = tmpFile.Close()
 		_ = os.Remove(tempFile)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "write_failed", "message": errWrite.Error()})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "write_failed", "message": errWrite.Error()})
 		return
 	}
 	if errClose := tmpFile.Close(); errClose != nil {
 		_ = os.Remove(tempFile)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "write_failed", "message": errClose.Error()})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "write_failed", "message": errClose.Error()})
 		return
 	}
 	defer func() {
@@ -150,35 +150,35 @@ func (h *Handler) PutConfigYAML(c *gin.Context) {
 	}()
 	_, err = config.LoadConfigOptional(tempFile, false)
 	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "invalid_config", "message": err.Error()})
+		c.JSON(http.StatusUnprocessableEntity, web.H{"error": "invalid_config", "message": err.Error()})
 		return
 	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if WriteConfig(h.configFilePath, body) != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "write_failed", "message": "failed to write config"})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "write_failed", "message": "failed to write config"})
 		return
 	}
 	// Reload into handler to keep memory in sync
 	newCfg, err := config.LoadConfig(h.configFilePath)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "reload_failed", "message": err.Error()})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "reload_failed", "message": err.Error()})
 		return
 	}
 	h.cfg = newCfg
-	c.JSON(http.StatusOK, gin.H{"ok": true, "changed": []string{"config"}})
+	c.JSON(http.StatusOK, web.H{"ok": true, "changed": []string{"config"}})
 }
 
 // GetConfigYAML returns the raw config.yaml file bytes without re-encoding.
 // It preserves comments and original formatting/styles.
-func (h *Handler) GetConfigYAML(c *gin.Context) {
+func (h *Handler) GetConfigYAML(c *web.Context) {
 	data, err := os.ReadFile(h.configFilePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "not_found", "message": "config file not found"})
+			c.JSON(http.StatusNotFound, web.H{"error": "not_found", "message": "config file not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "read_failed", "message": err.Error()})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "read_failed", "message": err.Error()})
 		return
 	}
 	c.Header("Content-Type", "application/yaml; charset=utf-8")
@@ -189,35 +189,35 @@ func (h *Handler) GetConfigYAML(c *gin.Context) {
 }
 
 // Debug
-func (h *Handler) GetDebug(c *gin.Context) { c.JSON(200, gin.H{"debug": h.cfg.Debug}) }
-func (h *Handler) PutDebug(c *gin.Context) { h.updateBoolField(c, func(v bool) { h.cfg.Debug = v }) }
+func (h *Handler) GetDebug(c *web.Context) { c.JSON(200, web.H{"debug": h.cfg.Debug}) }
+func (h *Handler) PutDebug(c *web.Context) { h.updateBoolField(c, func(v bool) { h.cfg.Debug = v }) }
 
 // UsageStatisticsEnabled
-func (h *Handler) GetUsageStatisticsEnabled(c *gin.Context) {
-	c.JSON(200, gin.H{"usage-statistics-enabled": h.cfg.UsageStatisticsEnabled})
+func (h *Handler) GetUsageStatisticsEnabled(c *web.Context) {
+	c.JSON(200, web.H{"usage-statistics-enabled": h.cfg.UsageStatisticsEnabled})
 }
-func (h *Handler) PutUsageStatisticsEnabled(c *gin.Context) {
+func (h *Handler) PutUsageStatisticsEnabled(c *web.Context) {
 	h.updateBoolField(c, func(v bool) { h.cfg.UsageStatisticsEnabled = v })
 }
 
 // UsageStatisticsEnabled
-func (h *Handler) GetLoggingToFile(c *gin.Context) {
-	c.JSON(200, gin.H{"logging-to-file": h.cfg.LoggingToFile})
+func (h *Handler) GetLoggingToFile(c *web.Context) {
+	c.JSON(200, web.H{"logging-to-file": h.cfg.LoggingToFile})
 }
-func (h *Handler) PutLoggingToFile(c *gin.Context) {
+func (h *Handler) PutLoggingToFile(c *web.Context) {
 	h.updateBoolField(c, func(v bool) { h.cfg.LoggingToFile = v })
 }
 
 // LogsMaxTotalSizeMB
-func (h *Handler) GetLogsMaxTotalSizeMB(c *gin.Context) {
-	c.JSON(200, gin.H{"logs-max-total-size-mb": h.cfg.LogsMaxTotalSizeMB})
+func (h *Handler) GetLogsMaxTotalSizeMB(c *web.Context) {
+	c.JSON(200, web.H{"logs-max-total-size-mb": h.cfg.LogsMaxTotalSizeMB})
 }
-func (h *Handler) PutLogsMaxTotalSizeMB(c *gin.Context) {
+func (h *Handler) PutLogsMaxTotalSizeMB(c *web.Context) {
 	var body struct {
 		Value *int `json:"value"`
 	}
 	if errBindJSON := c.ShouldBindJSON(&body); errBindJSON != nil || body.Value == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "invalid body"})
 		return
 	}
 	value := *body.Value
@@ -229,15 +229,15 @@ func (h *Handler) PutLogsMaxTotalSizeMB(c *gin.Context) {
 }
 
 // ErrorLogsMaxFiles
-func (h *Handler) GetErrorLogsMaxFiles(c *gin.Context) {
-	c.JSON(200, gin.H{"error-logs-max-files": h.cfg.ErrorLogsMaxFiles})
+func (h *Handler) GetErrorLogsMaxFiles(c *web.Context) {
+	c.JSON(200, web.H{"error-logs-max-files": h.cfg.ErrorLogsMaxFiles})
 }
-func (h *Handler) PutErrorLogsMaxFiles(c *gin.Context) {
+func (h *Handler) PutErrorLogsMaxFiles(c *web.Context) {
 	var body struct {
 		Value *int `json:"value"`
 	}
 	if errBindJSON := c.ShouldBindJSON(&body); errBindJSON != nil || body.Value == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "invalid body"})
 		return
 	}
 	value := *body.Value
@@ -249,48 +249,48 @@ func (h *Handler) PutErrorLogsMaxFiles(c *gin.Context) {
 }
 
 // Request log
-func (h *Handler) GetRequestLog(c *gin.Context) { c.JSON(200, gin.H{"request-log": h.cfg.RequestLog}) }
-func (h *Handler) PutRequestLog(c *gin.Context) {
+func (h *Handler) GetRequestLog(c *web.Context) { c.JSON(200, web.H{"request-log": h.cfg.RequestLog}) }
+func (h *Handler) PutRequestLog(c *web.Context) {
 	h.updateBoolField(c, func(v bool) { h.cfg.RequestLog = v })
 }
 
 // Websocket auth
-func (h *Handler) GetWebsocketAuth(c *gin.Context) {
-	c.JSON(200, gin.H{"ws-auth": h.cfg.WebsocketAuth})
+func (h *Handler) GetWebsocketAuth(c *web.Context) {
+	c.JSON(200, web.H{"ws-auth": h.cfg.WebsocketAuth})
 }
-func (h *Handler) PutWebsocketAuth(c *gin.Context) {
+func (h *Handler) PutWebsocketAuth(c *web.Context) {
 	h.updateBoolField(c, func(v bool) { h.cfg.WebsocketAuth = v })
 }
 
 // Request retry
-func (h *Handler) GetRequestRetry(c *gin.Context) {
-	c.JSON(200, gin.H{"request-retry": h.cfg.RequestRetry})
+func (h *Handler) GetRequestRetry(c *web.Context) {
+	c.JSON(200, web.H{"request-retry": h.cfg.RequestRetry})
 }
-func (h *Handler) PutRequestRetry(c *gin.Context) {
+func (h *Handler) PutRequestRetry(c *web.Context) {
 	h.updateIntField(c, func(v int) { h.cfg.RequestRetry = v })
 }
 
 // Max retry credentials
-func (h *Handler) GetMaxRetryCredentials(c *gin.Context) {
-	c.JSON(200, gin.H{"max-retry-credentials": h.cfg.MaxRetryCredentials})
+func (h *Handler) GetMaxRetryCredentials(c *web.Context) {
+	c.JSON(200, web.H{"max-retry-credentials": h.cfg.MaxRetryCredentials})
 }
-func (h *Handler) PutMaxRetryCredentials(c *gin.Context) {
+func (h *Handler) PutMaxRetryCredentials(c *web.Context) {
 	h.updateIntField(c, func(v int) { h.cfg.MaxRetryCredentials = v })
 }
 
 // Max retry interval
-func (h *Handler) GetMaxRetryInterval(c *gin.Context) {
-	c.JSON(200, gin.H{"max-retry-interval": h.cfg.MaxRetryInterval})
+func (h *Handler) GetMaxRetryInterval(c *web.Context) {
+	c.JSON(200, web.H{"max-retry-interval": h.cfg.MaxRetryInterval})
 }
-func (h *Handler) PutMaxRetryInterval(c *gin.Context) {
+func (h *Handler) PutMaxRetryInterval(c *web.Context) {
 	h.updateIntField(c, func(v int) { h.cfg.MaxRetryInterval = v })
 }
 
 // ForceModelPrefix
-func (h *Handler) GetForceModelPrefix(c *gin.Context) {
-	c.JSON(200, gin.H{"force-model-prefix": h.cfg.ForceModelPrefix})
+func (h *Handler) GetForceModelPrefix(c *web.Context) {
+	c.JSON(200, web.H{"force-model-prefix": h.cfg.ForceModelPrefix})
 }
-func (h *Handler) PutForceModelPrefix(c *gin.Context) {
+func (h *Handler) PutForceModelPrefix(c *web.Context) {
 	h.updateBoolField(c, func(v bool) { h.cfg.ForceModelPrefix = v })
 }
 
@@ -309,25 +309,25 @@ func normalizeRoutingStrategy(strategy string) (string, bool) {
 }
 
 // RoutingStrategy
-func (h *Handler) GetRoutingStrategy(c *gin.Context) {
+func (h *Handler) GetRoutingStrategy(c *web.Context) {
 	strategy, ok := normalizeRoutingStrategy(h.cfg.Routing.Strategy)
 	if !ok {
-		c.JSON(200, gin.H{"strategy": strings.TrimSpace(h.cfg.Routing.Strategy)})
+		c.JSON(200, web.H{"strategy": strings.TrimSpace(h.cfg.Routing.Strategy)})
 		return
 	}
-	c.JSON(200, gin.H{"strategy": strategy})
+	c.JSON(200, web.H{"strategy": strategy})
 }
-func (h *Handler) PutRoutingStrategy(c *gin.Context) {
+func (h *Handler) PutRoutingStrategy(c *web.Context) {
 	var body struct {
 		Value *string `json:"value"`
 	}
 	if errBindJSON := c.ShouldBindJSON(&body); errBindJSON != nil || body.Value == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "invalid body"})
 		return
 	}
 	normalized, ok := normalizeRoutingStrategy(*body.Value)
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid strategy"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "invalid strategy"})
 		return
 	}
 	h.cfg.Routing.Strategy = normalized
@@ -335,11 +335,11 @@ func (h *Handler) PutRoutingStrategy(c *gin.Context) {
 }
 
 // Proxy URL
-func (h *Handler) GetProxyURL(c *gin.Context) { c.JSON(200, gin.H{"proxy-url": h.cfg.ProxyURL}) }
-func (h *Handler) PutProxyURL(c *gin.Context) {
+func (h *Handler) GetProxyURL(c *web.Context) { c.JSON(200, web.H{"proxy-url": h.cfg.ProxyURL}) }
+func (h *Handler) PutProxyURL(c *web.Context) {
 	h.updateStringField(c, func(v string) { h.cfg.ProxyURL = v })
 }
-func (h *Handler) DeleteProxyURL(c *gin.Context) {
+func (h *Handler) DeleteProxyURL(c *web.Context) {
 	h.cfg.ProxyURL = ""
 	h.persist(c)
 }

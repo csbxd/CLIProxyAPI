@@ -18,7 +18,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/gorilla/websocket"
 	internalconfig "github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/interfaces"
@@ -106,7 +106,7 @@ func (*homeResponsesWebsocketExecutor) HttpRequest(context.Context, *coreauth.Au
 }
 
 func TestResponsesWebsocketHomeSelectedAuthCallbackPinsAndReusesFirstSelection(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	dispatcher := &homeResponsesWebsocketDispatcher{}
 	executor := &homeResponsesWebsocketExecutor{}
@@ -118,7 +118,7 @@ func TestResponsesWebsocketHomeSelectedAuthCallbackPinsAndReusesFirstSelection(t
 
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -471,7 +471,7 @@ func TestTruncateWebsocketCloseReason(t *testing.T) {
 }
 
 func TestForwardResponsesWebsocketMirrorsMappedMessageTooBig(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	serverErrCh := make(chan error, 1)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -482,7 +482,7 @@ func TestForwardResponsesWebsocketMirrorsMappedMessageTooBig(t *testing.T) {
 		}
 		defer func() { _ = conn.Close() }()
 
-		ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+		ctx, _ := web.CreateTestContext(httptest.NewRecorder())
 		ctx.Request = r
 		data := make(chan []byte)
 		errCh := make(chan *interfaces.ErrorMessage, 1)
@@ -540,7 +540,7 @@ func TestForwardResponsesWebsocketMirrorsMappedMessageTooBig(t *testing.T) {
 }
 
 func TestForwardResponsesWebsocketMirrorsPayloadMessageTooBig(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	serverErrCh := make(chan error, 1)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -551,7 +551,7 @@ func TestForwardResponsesWebsocketMirrorsPayloadMessageTooBig(t *testing.T) {
 		}
 		defer func() { _ = conn.Close() }()
 
-		ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+		ctx, _ := web.CreateTestContext(httptest.NewRecorder())
 		ctx.Request = r
 		data := make(chan []byte, 1)
 		errCh := make(chan *interfaces.ErrorMessage)
@@ -2033,9 +2033,9 @@ func TestAppendWebsocketTimelineEvent(t *testing.T) {
 }
 
 func TestSetWebsocketTimelineBody(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 
 	setWebsocketTimelineBody(c, " \n ")
 	if _, exists := c.Get(wsTimelineBodyKey); exists {
@@ -2057,9 +2057,9 @@ func TestSetWebsocketTimelineBody(t *testing.T) {
 }
 
 func TestWebsocketTimelineLogFallsBackToMemoryWithoutSource(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 	ts := time.Date(2026, time.April, 1, 12, 34, 56, 789000000, time.UTC)
 
 	timelineLog := newWebsocketTimelineLog(true, nil)
@@ -2494,7 +2494,7 @@ func TestForwardResponsesWebsocketRestoresAndForwardsCompletedOutput(t *testing.
 
 func testForwardResponsesWebsocketCompletedOutput(t *testing.T, preserve bool) {
 	t.Helper()
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	serverErrCh := make(chan error, 1)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -2510,7 +2510,7 @@ func testForwardResponsesWebsocketCompletedOutput(t *testing.T, preserve bool) {
 			}
 		}()
 
-		ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+		ctx, _ := web.CreateTestContext(httptest.NewRecorder())
 		ctx.Request = r
 
 		data := make(chan []byte, 2)
@@ -2603,7 +2603,7 @@ func testForwardResponsesWebsocketCompletedOutput(t *testing.T, preserve bool) {
 }
 
 func TestForwardResponsesWebsocketTreatsResponseDoneAsTerminalWithoutRewriting(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	serverErrCh := make(chan error, 1)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -2619,7 +2619,7 @@ func TestForwardResponsesWebsocketTreatsResponseDoneAsTerminalWithoutRewriting(t
 			}
 		}()
 
-		ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+		ctx, _ := web.CreateTestContext(httptest.NewRecorder())
 		ctx.Request = r
 
 		data := make(chan []byte, 1)
@@ -2773,7 +2773,7 @@ func TestResponsesUpstreamErrorBodyDrivesExposure(t *testing.T) {
 }
 
 func TestForwardResponsesWebsocketTreatsErrorPayloadAsTerminal(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	serverErrCh := make(chan error, 1)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -2784,7 +2784,7 @@ func TestForwardResponsesWebsocketTreatsErrorPayloadAsTerminal(t *testing.T) {
 		}
 		defer func() { _ = conn.Close() }()
 
-		ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+		ctx, _ := web.CreateTestContext(httptest.NewRecorder())
 		ctx.Request = r
 
 		data := make(chan []byte, 1)
@@ -2859,7 +2859,7 @@ func TestRecordPendingToolCallIDsFromPayloadDropsSatisfiedCalls(t *testing.T) {
 }
 
 func TestForwardResponsesWebsocketLogsAttemptedResponseOnWriteFailure(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	serverErrCh := make(chan error, 1)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -2869,7 +2869,7 @@ func TestForwardResponsesWebsocketLogsAttemptedResponseOnWriteFailure(t *testing
 			return
 		}
 
-		ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+		ctx, _ := web.CreateTestContext(httptest.NewRecorder())
 		ctx.Request = r
 
 		data := make(chan []byte, 1)
@@ -2924,7 +2924,7 @@ func TestForwardResponsesWebsocketLogsAttemptedResponseOnWriteFailure(t *testing
 }
 
 func TestResponsesWebsocketTimelineRecordsDisconnectEvent(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	manager := coreauth.NewManager(nil, nil, nil)
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{RequestLog: true}, manager)
@@ -2932,8 +2932,8 @@ func TestResponsesWebsocketTimelineRecordsDisconnectEvent(t *testing.T) {
 	logsDir := t.TempDir()
 
 	timelineCh := make(chan string, 1)
-	router := gin.New()
-	router.GET("/v1/responses/ws", func(c *gin.Context) {
+	router := web.New()
+	router.GET("/v1/responses/ws", func(c *web.Context) {
 		source, errSource := requestlogging.NewFileBodySourceInDir(logsDir, "websocket-timeline-test")
 		if errSource != nil {
 			timelineCh <- ""
@@ -2987,7 +2987,7 @@ func TestResponsesWebsocketTimelineRecordsDisconnectEvent(t *testing.T) {
 }
 
 func TestResponsesWebsocketMirrorsUpstreamMessageTooBigDisconnect(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	for _, provider := range []string{"codex", "xai"} {
 		t.Run(provider, func(t *testing.T) {
@@ -2997,7 +2997,7 @@ func TestResponsesWebsocketMirrorsUpstreamMessageTooBigDisconnect(t *testing.T) 
 			base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 			h := NewOpenAIResponsesAPIHandler(base)
 
-			router := gin.New()
+			router := web.New()
 			router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 			server := httptest.NewServer(router)
 			defer server.Close()
@@ -3038,7 +3038,7 @@ func TestResponsesWebsocketMirrorsUpstreamMessageTooBigDisconnect(t *testing.T) 
 }
 
 func TestResponsesWebsocketSendsJSONErrorOnUpstreamCyberPolicyDisconnect(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	executor := &websocketUpstreamDisconnectExecutor{provider: "codex", subscribed: make(chan string, 1)}
 	manager := coreauth.NewManager(nil, nil, nil)
@@ -3046,7 +3046,7 @@ func TestResponsesWebsocketSendsJSONErrorOnUpstreamCyberPolicyDisconnect(t *test
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	h := NewOpenAIResponsesAPIHandler(base)
 
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -3098,7 +3098,7 @@ func TestResponsesWebsocketSendsJSONErrorOnUpstreamCyberPolicyDisconnect(t *test
 }
 
 func TestResponsesWebsocketHidesNonClientUpstreamDisconnectErrors(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	tests := []struct {
 		name string
@@ -3141,7 +3141,7 @@ func TestResponsesWebsocketHidesNonClientUpstreamDisconnectErrors(t *testing.T) 
 			base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 			h := NewOpenAIResponsesAPIHandler(base)
 
-			router := gin.New()
+			router := web.New()
 			router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 			server := httptest.NewServer(router)
 			defer server.Close()
@@ -3181,7 +3181,7 @@ func TestResponsesWebsocketHidesNonClientUpstreamDisconnectErrors(t *testing.T) 
 // with status 400 on the stream path and 502 through the disconnect channel. Both
 // must reach the client, because no credential rotation can satisfy the request.
 func TestResponsesWebsocketExposesCyberPolicyRegardlessOfStatus(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	const cyberPolicyBody = `{"error":{"type":"invalid_request","code":"cyber_policy","message":"This content was flagged for possible cybersecurity risk.","param":null}}`
 
@@ -3193,7 +3193,7 @@ func TestResponsesWebsocketExposesCyberPolicyRegardlessOfStatus(t *testing.T) {
 			base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 			h := NewOpenAIResponsesAPIHandler(base)
 
-			router := gin.New()
+			router := web.New()
 			router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 			server := httptest.NewServer(router)
 			defer server.Close()
@@ -3226,7 +3226,7 @@ func TestResponsesWebsocketExposesCyberPolicyRegardlessOfStatus(t *testing.T) {
 }
 
 func TestResponsesWebsocketExposesTerminalOAuthError(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	executor := &websocketUpstreamDisconnectExecutor{provider: "codex", subscribed: make(chan string, 1)}
 	manager := coreauth.NewManager(nil, nil, nil)
@@ -3234,7 +3234,7 @@ func TestResponsesWebsocketExposesTerminalOAuthError(t *testing.T) {
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	h := NewOpenAIResponsesAPIHandler(base)
 
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -3369,7 +3369,7 @@ func TestResponsesWebsocketTerminalErrorWrittenOnceAcrossForwardAndDisconnect(t 
 }
 
 func TestResponsesWebsocketCodexWebsocketPassthroughPassesCompactedRequestWithoutTranscriptMerge(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	executor := &websocketDirectCaptureExecutor{done: make(chan struct{})}
 	manager := coreauth.NewManager(nil, nil, nil)
@@ -3391,7 +3391,7 @@ func TestResponsesWebsocketCodexWebsocketPassthroughPassesCompactedRequestWithou
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	h := NewOpenAIResponsesAPIHandler(base)
 	firstRequest := []byte(`{"type":"response.create","model":"test-model","input":[{"type":"message","role":"user","content":"first"}]}`)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 
 	server := httptest.NewServer(router)
@@ -3448,7 +3448,7 @@ func TestResponsesWebsocketCodexWebsocketPassthroughPassesCompactedRequestWithou
 }
 
 func TestResponsesWebsocketXAIWebsocketPassthroughKeepsNativeIncrementalRequest(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	modelName := "xai-websocket-passthrough-model"
 	executor := &websocketDirectCaptureExecutor{provider: "xai", done: make(chan struct{})}
@@ -3470,7 +3470,7 @@ func TestResponsesWebsocketXAIWebsocketPassthroughKeepsNativeIncrementalRequest(
 
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 
 	server := httptest.NewServer(router)
@@ -3533,7 +3533,7 @@ func TestResponsesWebsocketXAIWebsocketPassthroughKeepsNativeIncrementalRequest(
 }
 
 func TestResponsesWebsocketFullRequestCanRouteFromNativeWebsocketToBuiltInProvider(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	const sourceModel = "codex-provider-route-source"
 	const targetModel = "claude-provider-route-target"
@@ -3568,7 +3568,7 @@ func TestResponsesWebsocketFullRequestCanRouteFromNativeWebsocketToBuiltInProvid
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	base.SetModelRouterHost(&websocketProviderRouteHost{})
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -3623,7 +3623,7 @@ func TestResponsesWebsocketFullRequestCanRouteFromNativeWebsocketToBuiltInProvid
 }
 
 func TestResponsesWebsocketHidesProviderRouteAuthFailure(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	const sourceModel = "codex-provider-route-failure-source"
 	const targetModel = "claude-provider-route-target"
@@ -3649,7 +3649,7 @@ func TestResponsesWebsocketHidesProviderRouteAuthFailure(t *testing.T) {
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	base.SetModelRouterHost(&websocketProviderRouteHost{})
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -3690,7 +3690,7 @@ func TestResponsesWebsocketHidesProviderRouteAuthFailure(t *testing.T) {
 }
 
 func TestResponsesWebsocketDeltaRouteToBuiltInProviderRequiresFullReplay(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	const sourceModel = "codex-provider-route-delta-source"
 	const targetModel = "claude-provider-route-target"
@@ -3716,7 +3716,7 @@ func TestResponsesWebsocketDeltaRouteToBuiltInProviderRequiresFullReplay(t *test
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	base.SetModelRouterHost(&websocketProviderRouteHost{})
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -3757,7 +3757,7 @@ func TestResponsesWebsocketDeltaRouteToBuiltInProviderRequiresFullReplay(t *test
 }
 
 func TestResponsesWebsocketClosesForHTTPReplayWhenWebsocketEligibilityChanges(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	modelName := "xai-websocket-mode-change-model"
 	executor := &websocketDirectCaptureExecutor{provider: "xai", done: make(chan struct{})}
@@ -3779,7 +3779,7 @@ func TestResponsesWebsocketClosesForHTTPReplayWhenWebsocketEligibilityChanges(t 
 
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 
 	server := httptest.NewServer(router)
@@ -3883,7 +3883,7 @@ func TestResponsesWebsocketClosesForHTTPReplayWhenWebsocketEligibilityChanges(t 
 }
 
 func TestResponsesWebsocketRejectsUnknownPreviousResponseOnNewSocket(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	modelName := "xai-websocket-reconnect-model"
 	executor := &websocketDirectCaptureExecutor{provider: "xai"}
@@ -3905,7 +3905,7 @@ func TestResponsesWebsocketRejectsUnknownPreviousResponseOnNewSocket(t *testing.
 
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 
 	server := httptest.NewServer(router)
@@ -3960,7 +3960,7 @@ func TestResponsesWebsocketRejectsUnknownPreviousResponseOnNewSocket(t *testing.
 }
 
 func TestResponsesWebsocketClosesAfterNonRetryableClientError(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	modelName := "xai-websocket-rollback-model"
 	executor := &websocketCanonicalRollbackExecutor{}
@@ -3981,7 +3981,7 @@ func TestResponsesWebsocketClosesAfterNonRetryableClientError(t *testing.T) {
 
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 
 	server := httptest.NewServer(router)
@@ -4037,7 +4037,7 @@ const itemNotPersistedUpstreamMessage = "Item with id 'rs_0b5f3eb6f51f175c0169ca
 // conversation must survive: after reconnecting with the full input the turn
 // succeeds, and no stale per-socket transcript leaks into the new connection.
 func TestResponsesWebsocketExposesItemNotPersistedAndRecoversOnReconnect(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	modelName := "xai-item-miss-model"
 	executor := &websocketCanonicalRollbackExecutor{
@@ -4057,7 +4057,7 @@ func TestResponsesWebsocketExposesItemNotPersistedAndRecoversOnReconnect(t *test
 
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -4150,7 +4150,7 @@ func TestResponsesWebsocketSwitchesPinnedAuthAcrossProviders(t *testing.T) {
 		{name: "xai websocket different model", xaiWebsockets: true, returnToDifferentXAIModel: true},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
-			gin.SetMode(gin.TestMode)
+			web.SetMode(web.TestMode)
 
 			xaiModel := "xai-provider-switch-" + strings.ReplaceAll(testCase.name, " ", "-")
 			returnXAIModel := xaiModel
@@ -4215,7 +4215,7 @@ func TestResponsesWebsocketSwitchesPinnedAuthAcrossProviders(t *testing.T) {
 
 			base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 			h := NewOpenAIResponsesAPIHandler(base)
-			router := gin.New()
+			router := web.New()
 			router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 
 			server := httptest.NewServer(router)
@@ -4432,7 +4432,7 @@ func TestWebsocketUpstreamSupportsCompactionReplayForModelFalseWhenMixedBackends
 }
 
 func TestResponsesWebsocketPrewarmPreservesCompactedFollowup(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	for _, tc := range []struct {
 		name, input                                                          string
 		parent, failFirst, wrongParent, invalidFirst, invalidType, omitModel bool
@@ -4460,7 +4460,7 @@ func TestResponsesWebsocketPrewarmPreservesCompactedFollowup(t *testing.T) {
 			registry.GetGlobalRegistry().RegisterClient(auth.ID, auth.Provider, []*registry.ModelInfo{{ID: "prewarm-prefix-model"}})
 			t.Cleanup(func() { registry.GetGlobalRegistry().UnregisterClient(auth.ID) })
 			h := NewOpenAIResponsesAPIHandler(handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager))
-			router := gin.New()
+			router := web.New()
 			router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 			server := httptest.NewServer(router)
 			defer server.Close()
@@ -4597,7 +4597,7 @@ func TestResponsesWebsocketPrewarmPreservesCompactedFollowup(t *testing.T) {
 }
 
 func TestResponsesWebsocketPrewarmHandledLocallyForSSEUpstream(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	executor := &websocketCaptureExecutor{}
 	manager := coreauth.NewManager(nil, nil, nil)
@@ -4613,7 +4613,7 @@ func TestResponsesWebsocketPrewarmHandledLocallyForSSEUpstream(t *testing.T) {
 
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 
 	server := httptest.NewServer(router)
@@ -4704,7 +4704,7 @@ func TestResponsesWebsocketPrewarmHandledLocallyForSSEUpstream(t *testing.T) {
 }
 
 func TestResponsesWebsocketMergesTranscriptForNonPassthroughUpstream(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	executor := &websocketCaptureExecutor{}
 	manager := coreauth.NewManager(nil, nil, nil)
@@ -4725,7 +4725,7 @@ func TestResponsesWebsocketMergesTranscriptForNonPassthroughUpstream(t *testing.
 
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 
 	server := httptest.NewServer(router)
@@ -4776,7 +4776,7 @@ func TestResponsesWebsocketMergesTranscriptForNonPassthroughUpstream(t *testing.
 }
 
 func TestResponsesWebsocketUsesObservedCompactionResponseForReplay(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	for _, tc := range []struct {
 		name       string
@@ -4802,7 +4802,7 @@ func TestResponsesWebsocketUsesObservedCompactionResponseForReplay(t *testing.T)
 			t.Cleanup(func() { registry.GetGlobalRegistry().UnregisterClient(auth.ID) })
 
 			h := NewOpenAIResponsesAPIHandler(handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager))
-			router := gin.New()
+			router := web.New()
 			router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 			server := httptest.NewServer(router)
 			defer server.Close()
@@ -4855,7 +4855,7 @@ func TestResponsesWebsocketUsesObservedCompactionResponseForReplay(t *testing.T)
 }
 
 func TestResponsesWebsocketRetainsObservedCompactionAcrossSubsequentTurns(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	executor := &websocketCaptureExecutor{responses: [][]byte{
 		[]byte(`{"type":"response.completed","response":{"id":"resp-1","output":[{"type":"message","role":"assistant","id":"old-assistant"}]}}`),
@@ -4873,7 +4873,7 @@ func TestResponsesWebsocketRetainsObservedCompactionAcrossSubsequentTurns(t *tes
 	t.Cleanup(func() { registry.GetGlobalRegistry().UnregisterClient(auth.ID) })
 
 	h := NewOpenAIResponsesAPIHandler(handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager))
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -4980,7 +4980,7 @@ func (h *websocketPluginRouteExecutorHost) ExecutePluginExecutorStream(_ context
 }
 
 func TestResponsesWebsocketUsesObservedCompactionResponseForPluginRouteOverride(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	const model = "plugin-test-model"
 	pluginHost := &websocketPluginRouteExecutorHost{
@@ -4994,7 +4994,7 @@ func TestResponsesWebsocketUsesObservedCompactionResponseForPluginRouteOverride(
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, nil)
 	base.SetModelRouterHost(pluginHost)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -5050,7 +5050,7 @@ func TestResponsesWebsocketUsesObservedCompactionResponseForPluginRouteOverride(
 }
 
 func TestResponsesWebsocketPluginSwitchDoesNotInheritObservedCompaction(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	const model = "plugin-switch-model"
 	pluginHost := &websocketPluginRouteExecutorHost{
@@ -5063,7 +5063,7 @@ func TestResponsesWebsocketPluginSwitchDoesNotInheritObservedCompaction(t *testi
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, nil)
 	base.SetModelRouterHost(pluginHost)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -5128,7 +5128,7 @@ func (h *websocketCustomProviderRouteHost) RouteModel(_ context.Context, req plu
 }
 
 func TestResponsesWebsocketProviderRoutePinsCompactionAuth(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	const model = "source-route-model"
 	executor := &websocketProviderCaptureExecutor{
@@ -5166,7 +5166,7 @@ func TestResponsesWebsocketProviderRoutePinsCompactionAuth(t *testing.T) {
 		targetModel:    "target-model",
 	})
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -5219,7 +5219,7 @@ func TestResponsesWebsocketProviderRoutePinsCompactionAuth(t *testing.T) {
 }
 
 func TestResponsesWebsocketSuccessiveCompactionsInSameSession(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	executor := &websocketCaptureExecutor{responses: [][]byte{
 		[]byte(`{"type":"response.completed","response":{"id":"resp-1","output":[{"type":"message","role":"assistant","id":"old-assistant-1"}]}}`),
@@ -5238,7 +5238,7 @@ func TestResponsesWebsocketSuccessiveCompactionsInSameSession(t *testing.T) {
 	t.Cleanup(func() { registry.GetGlobalRegistry().UnregisterClient(auth.ID) })
 
 	h := NewOpenAIResponsesAPIHandler(handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager))
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -5313,7 +5313,7 @@ func (d *homeHTTPResponsesWebsocketDispatcher) RPopAuth(context.Context, string,
 func (*homeHTTPResponsesWebsocketDispatcher) AbortAmbiguousDispatch() {}
 
 func TestResponsesWebsocketUsesObservedCompactionResponseForHomeRuntimeAuth(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	const model = "gpt-5.4"
 	dispatcher := &homeHTTPResponsesWebsocketDispatcher{}
@@ -5334,7 +5334,7 @@ func TestResponsesWebsocketUsesObservedCompactionResponseForHomeRuntimeAuth(t *t
 
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -5390,7 +5390,7 @@ func TestResponsesWebsocketUsesObservedCompactionResponseForHomeRuntimeAuth(t *t
 }
 
 func TestResponsesWebsocketProviderRouteSwitchDoesNotInheritCompaction(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	const model = "switch-provider-source-model"
 	executorA := &websocketProviderCaptureExecutor{
@@ -5430,7 +5430,7 @@ func TestResponsesWebsocketProviderRouteSwitchDoesNotInheritCompaction(t *testin
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	base.SetModelRouterHost(routerHost)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -5474,7 +5474,7 @@ func TestResponsesWebsocketProviderRouteSwitchDoesNotInheritCompaction(t *testin
 }
 
 func TestResponsesWebsocketProviderRouteSwitchBackDoesNotInheritStaleCompaction(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	const model = "switchback-provider-source-model"
 	executorA := &websocketProviderCaptureExecutor{
@@ -5515,7 +5515,7 @@ func TestResponsesWebsocketProviderRouteSwitchBackDoesNotInheritStaleCompaction(
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	base.SetModelRouterHost(routerHost)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -5555,7 +5555,7 @@ func TestResponsesWebsocketProviderRouteSwitchBackDoesNotInheritStaleCompaction(
 }
 
 func TestResponsesWebsocketProviderRouteIgnoresResidualPinnedAuth(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	const model = "residual-pin-source-model"
 	unroutedExecutor := &websocketProviderCaptureExecutor{
@@ -5598,7 +5598,7 @@ func TestResponsesWebsocketProviderRouteIgnoresResidualPinnedAuth(t *testing.T) 
 		targetModel:    "target-model",
 	})
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -5643,7 +5643,7 @@ func TestResponsesWebsocketProviderRouteIgnoresResidualPinnedAuth(t *testing.T) 
 }
 
 func TestResponsesWebsocketPluginToProviderOverrideSwitch(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	const model = "plugin-to-provider-model"
 	pluginHost := &websocketPluginRouteExecutorHost{
@@ -5674,7 +5674,7 @@ func TestResponsesWebsocketPluginToProviderOverrideSwitch(t *testing.T) {
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	base.SetModelRouterHost(multiRouter)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -5769,7 +5769,7 @@ func (h *websocketDynamicProviderRouteHost) RouteModel(_ context.Context, req pl
 }
 
 func TestResponsesWebsocketDoesNotInjectPreviousResponseIDWhenPendingToolOutputMissing(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	executor := &websocketCompactionCaptureExecutor{}
 	manager := coreauth.NewManager(nil, nil, nil)
@@ -5790,7 +5790,7 @@ func TestResponsesWebsocketDoesNotInjectPreviousResponseIDWhenPendingToolOutputM
 
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 
 	server := httptest.NewServer(router)
@@ -5845,7 +5845,7 @@ func TestResponsesWebsocketDoesNotInjectPreviousResponseIDWhenPendingToolOutputM
 }
 
 func TestResponsesWebsocketStripsGenerateWhenWebsocketAttemptFallsBackToHTTP(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	selector := &orderedWebsocketSelector{order: []string{"auth-ws", "auth-http", "auth-http"}}
 	executor := &websocketBootstrapFallbackExecutor{}
@@ -5875,7 +5875,7 @@ func TestResponsesWebsocketStripsGenerateWhenWebsocketAttemptFallsBackToHTTP(t *
 
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 
 	server := httptest.NewServer(router)
@@ -5941,10 +5941,10 @@ func TestResponsesWebsocketStripsGenerateWhenWebsocketAttemptFallsBackToHTTP(t *
 }
 
 func TestWebsocketClientAddressUsesGinClientIP(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	recorder := httptest.NewRecorder()
-	c, engine := gin.CreateTestContext(recorder)
+	c, engine := web.CreateTestContext(recorder)
 	if err := engine.SetTrustedProxies([]string{"0.0.0.0/0", "::/0"}); err != nil {
 		t.Fatalf("SetTrustedProxies: %v", err)
 	}
@@ -5966,7 +5966,7 @@ func TestWebsocketClientAddressReturnsEmptyForNilContext(t *testing.T) {
 }
 
 func TestResponsesWebsocketPinsOnlyWebsocketCapableAuth(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	selector := &orderedWebsocketSelector{order: []string{"auth-sse", "auth-ws"}}
 	executor := &websocketAuthCaptureExecutor{}
@@ -5996,7 +5996,7 @@ func TestResponsesWebsocketPinsOnlyWebsocketCapableAuth(t *testing.T) {
 
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 
 	server := httptest.NewServer(router)
@@ -6036,7 +6036,7 @@ func TestResponsesWebsocketPinsOnlyWebsocketCapableAuth(t *testing.T) {
 }
 
 func TestResponsesWebsocketUsesNativeIncrementalAfterPinningWebsocketAuthFromMixedPool(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	modelName := "xai-mixed-pool-model"
 	selector := &orderedWebsocketSelector{order: []string{"auth-http", "auth-ws"}}
@@ -6065,7 +6065,7 @@ func TestResponsesWebsocketUsesNativeIncrementalAfterPinningWebsocketAuthFromMix
 
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -6111,7 +6111,7 @@ func TestResponsesWebsocketUsesNativeIncrementalAfterPinningWebsocketAuthFromMix
 }
 
 func TestResponsesWebsocketReplaysImmediatelyAfterPinnedAuthFailure(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	tests := []struct {
 		name            string
@@ -6159,7 +6159,7 @@ func TestResponsesWebsocketReplaysImmediatelyAfterPinnedAuthFailure(t *testing.T
 
 			base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 			h := NewOpenAIResponsesAPIHandler(base)
-			router := gin.New()
+			router := web.New()
 			router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 
 			server := httptest.NewServer(router)
@@ -6338,7 +6338,7 @@ func (e *websocketPinnedPrematureCloseExecutor) Payloads(authID string) [][]byte
 }
 
 func TestResponsesWebsocketReleasesPinnedAuthAfterStreamClosed408(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	selector := &orderedWebsocketSelector{order: []string{"auth-a", "auth-b"}}
 	executor := &websocketPinnedPrematureCloseExecutor{}
@@ -6373,7 +6373,7 @@ func TestResponsesWebsocketReleasesPinnedAuthAfterStreamClosed408(t *testing.T) 
 
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 
 	server := httptest.NewServer(router)
@@ -6629,7 +6629,7 @@ func TestDedupeResponsesWebsocketInputItemsByIDKeepsReferencedToolCall(t *testin
 }
 
 func TestResponsesWebsocketCompactionResetsTurnStateOnCustomToolTranscriptReplacement(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	executor := &websocketCompactionCaptureExecutor{}
 	manager := coreauth.NewManager(nil, nil, nil)
@@ -6645,7 +6645,7 @@ func TestResponsesWebsocketCompactionResetsTurnStateOnCustomToolTranscriptReplac
 
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 	router.POST("/v1/responses/compact", h.Compact)
 
@@ -6733,7 +6733,7 @@ func TestResponsesWebsocketCompactionResetsTurnStateOnCustomToolTranscriptReplac
 }
 
 func TestResponsesWebsocketCompactionResetsTurnStateOnTranscriptReplacement(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	executor := &websocketCompactionCaptureExecutor{}
 	manager := coreauth.NewManager(nil, nil, nil)
@@ -6749,7 +6749,7 @@ func TestResponsesWebsocketCompactionResetsTurnStateOnTranscriptReplacement(t *t
 
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses/ws", h.ResponsesWebsocket)
 	router.POST("/v1/responses/compact", h.Compact)
 
@@ -7094,7 +7094,7 @@ func TestNormalizeSubsequentRequestAssistantInputTriggersTranscriptReplacement(t
 }
 
 func TestForwardResponsesWebsocketEmitsPeriodicPingControlFrames(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	serverErrCh := make(chan error, 1)
 	data := make(chan []byte)
@@ -7108,7 +7108,7 @@ func TestForwardResponsesWebsocketEmitsPeriodicPingControlFrames(t *testing.T) {
 		}
 		defer func() { _ = conn.Close() }()
 
-		ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+		ctx, _ := web.CreateTestContext(httptest.NewRecorder())
 		ctx.Request = r
 
 		cfg := &sdkconfig.SDKConfig{
@@ -7191,7 +7191,7 @@ func TestForwardResponsesWebsocketEmitsPeriodicPingControlFrames(t *testing.T) {
 }
 
 func TestForwardResponsesWebsocketPingKeepAliveOptionsOverride(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	serverErrCh := make(chan error, 1)
 	data := make(chan []byte)
@@ -7205,7 +7205,7 @@ func TestForwardResponsesWebsocketPingKeepAliveOptionsOverride(t *testing.T) {
 		}
 		defer func() { _ = conn.Close() }()
 
-		ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+		ctx, _ := web.CreateTestContext(httptest.NewRecorder())
 		ctx.Request = r
 
 		interval := 20 * time.Millisecond
@@ -7343,7 +7343,7 @@ func TestResponsesWebsocketWriterWritePing(t *testing.T) {
 }
 
 func TestForwardResponsesWebsocketPingWriteFailureAbortsSession(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	serverErrCh := make(chan error, 1)
 	cancelledCh := make(chan error, 1)
@@ -7358,7 +7358,7 @@ func TestForwardResponsesWebsocketPingWriteFailureAbortsSession(t *testing.T) {
 		}
 		defer func() { _ = conn.Close() }()
 
-		ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+		ctx, _ := web.CreateTestContext(httptest.NewRecorder())
 		ctx.Request = r
 
 		interval := 10 * time.Millisecond

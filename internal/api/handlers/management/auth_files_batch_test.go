@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 )
@@ -47,7 +47,7 @@ func TestUploadAuthFile_BatchMultipart(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodPost, "/v0/management/auth-files", &body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	ctx.Request = req
@@ -120,7 +120,7 @@ func TestUploadAuthFile_BatchMultipart_InvalidJSONDoesNotOverwriteExistingFile(t
 	}
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodPost, "/v0/management/auth-files", &body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	ctx.Request = req
@@ -164,7 +164,7 @@ func TestDeleteAuthFile_BatchQuery(t *testing.T) {
 	h.tokenStore = &memoryAuthStore{}
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(
 		http.MethodDelete,
 		"/v0/management/auth-files?name="+url.QueryEscape(files[0])+"&name="+url.QueryEscape(files[1]),

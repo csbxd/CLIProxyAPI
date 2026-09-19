@@ -13,7 +13,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	. "github.com/router-for-me/CLIProxyAPI/v7/internal/constant"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/interfaces"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
@@ -58,7 +58,7 @@ func (h *OpenAIAPIHandler) Models() []map[string]any {
 // OpenAIModels handles the /v1/models endpoint.
 // It returns a list of available AI models with their capabilities
 // and specifications in OpenAI-compatible format.
-func (h *OpenAIAPIHandler) OpenAIModels(c *gin.Context) {
+func (h *OpenAIAPIHandler) OpenAIModels(c *web.Context) {
 	if _, ok := c.Request.URL.Query()["client_version"]; ok {
 		clientVersion := c.Query("client_version")
 		h.WriteModelListResponse(c, h.HandlerType(), h.codexClientModelsResponse(clientVersion))
@@ -89,7 +89,7 @@ func (h *OpenAIAPIHandler) OpenAIModels(c *gin.Context) {
 		filteredModels[i] = filteredModel
 	}
 
-	h.WriteModelListResponse(c, h.HandlerType(), gin.H{
+	h.WriteModelListResponse(c, h.HandlerType(), web.H{
 		"object": "list",
 		"data":   filteredModels,
 	})
@@ -101,7 +101,7 @@ func (h *OpenAIAPIHandler) OpenAIModels(c *gin.Context) {
 //
 // Parameters:
 //   - c: The Gin context containing the HTTP request and response
-func (h *OpenAIAPIHandler) ChatCompletions(c *gin.Context) {
+func (h *OpenAIAPIHandler) ChatCompletions(c *web.Context) {
 	rawJSON, err := handlers.ReadRequestBody(c)
 	// If data retrieval fails, return a 400 Bad Request error.
 	if err != nil {
@@ -156,7 +156,7 @@ func shouldTreatAsResponsesFormat(rawJSON []byte) bool {
 //
 // Parameters:
 //   - c: The Gin context containing the HTTP request and response
-func (h *OpenAIAPIHandler) Completions(c *gin.Context) {
+func (h *OpenAIAPIHandler) Completions(c *web.Context) {
 	rawJSON, err := handlers.ReadRequestBody(c)
 	// If data retrieval fails, return a 400 Bad Request error.
 	if err != nil {
@@ -432,7 +432,7 @@ func convertChatCompletionsStreamChunkToCompletions(chunkData []byte) []byte {
 // Parameters:
 //   - c: The Gin context containing the HTTP request and response
 //   - rawJSON: The raw JSON bytes of the OpenAI-compatible request
-func (h *OpenAIAPIHandler) handleNonStreamingResponse(c *gin.Context, rawJSON []byte) {
+func (h *OpenAIAPIHandler) handleNonStreamingResponse(c *web.Context, rawJSON []byte) {
 	c.Header("Content-Type", "application/json")
 
 	modelName := gjson.GetBytes(rawJSON, "model").String()
@@ -457,7 +457,7 @@ func (h *OpenAIAPIHandler) handleNonStreamingResponse(c *gin.Context, rawJSON []
 // Parameters:
 //   - c: The Gin context containing the HTTP request and response
 //   - rawJSON: The raw JSON bytes of the OpenAI-compatible request
-func (h *OpenAIAPIHandler) handleStreamingResponse(c *gin.Context, rawJSON []byte) {
+func (h *OpenAIAPIHandler) handleStreamingResponse(c *web.Context, rawJSON []byte) {
 	// Get the http.Flusher interface to manually flush the response.
 	flusher, ok := c.Writer.(http.Flusher)
 	if !ok {
@@ -542,7 +542,7 @@ func (h *OpenAIAPIHandler) handleStreamingResponse(c *gin.Context, rawJSON []byt
 // Parameters:
 //   - c: The Gin context containing the HTTP request and response
 //   - rawJSON: The raw JSON bytes of the OpenAI-compatible completions request
-func (h *OpenAIAPIHandler) handleCompletionsNonStreamingResponse(c *gin.Context, rawJSON []byte) {
+func (h *OpenAIAPIHandler) handleCompletionsNonStreamingResponse(c *web.Context, rawJSON []byte) {
 	c.Header("Content-Type", "application/json")
 
 	// Convert completions request to chat completions format
@@ -571,7 +571,7 @@ func (h *OpenAIAPIHandler) handleCompletionsNonStreamingResponse(c *gin.Context,
 // Parameters:
 //   - c: The Gin context containing the HTTP request and response
 //   - rawJSON: The raw JSON bytes of the OpenAI-compatible completions request
-func (h *OpenAIAPIHandler) handleCompletionsStreamingResponse(c *gin.Context, rawJSON []byte) {
+func (h *OpenAIAPIHandler) handleCompletionsStreamingResponse(c *web.Context, rawJSON []byte) {
 	// Get the http.Flusher interface to manually flush the response.
 	flusher, ok := c.Writer.(http.Flusher)
 	if !ok {
@@ -683,7 +683,7 @@ func (h *OpenAIAPIHandler) handleCompletionsStreamingResponse(c *gin.Context, ra
 		}
 	}
 }
-func (h *OpenAIAPIHandler) handleStreamResult(c *gin.Context, flusher http.Flusher, cancel func(error), data <-chan []byte, errs <-chan *interfaces.ErrorMessage) {
+func (h *OpenAIAPIHandler) handleStreamResult(c *web.Context, flusher http.Flusher, cancel func(error), data <-chan []byte, errs <-chan *interfaces.ErrorMessage) {
 	h.ForwardStream(c, flusher, cancel, data, errs, handlers.StreamForwardOptions{
 		WriteChunk: func(chunk []byte) {
 			_, _ = fmt.Fprintf(c.Writer, "data: %s\n\n", string(chunk))

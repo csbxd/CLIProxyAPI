@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -26,7 +26,7 @@ func (s *Server) enableKeepAlive(timeout time.Duration, onTimeout func()) {
 	go s.watchKeepAlive()
 }
 
-func (s *Server) handleKeepAlive(c *gin.Context) {
+func (s *Server) handleKeepAlive(c *web.Context) {
 	if s.localPassword != "" {
 		provided := strings.TrimSpace(c.GetHeader("Authorization"))
 		if provided != "" {
@@ -39,13 +39,13 @@ func (s *Server) handleKeepAlive(c *gin.Context) {
 			provided = strings.TrimSpace(c.GetHeader("X-Local-Password"))
 		}
 		if subtle.ConstantTimeCompare([]byte(provided), []byte(s.localPassword)) != 1 {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid password"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, web.H{"error": "invalid password"})
 			return
 		}
 	}
 
 	s.signalKeepAlive()
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	c.JSON(http.StatusOK, web.H{"status": "ok"})
 }
 
 func (s *Server) signalKeepAlive() {

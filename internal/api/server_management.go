@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/managementasset"
 	log "github.com/sirupsen/logrus"
 )
@@ -199,8 +199,8 @@ func (s *Server) registerManagementRoutes() {
 	}
 }
 
-func (s *Server) managementAvailabilityMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
+func (s *Server) managementAvailabilityMiddleware() web.HandlerFunc {
+	return func(c *web.Context) {
 		if !s.managementAvailable(c) {
 			return
 		}
@@ -208,7 +208,7 @@ func (s *Server) managementAvailabilityMiddleware() gin.HandlerFunc {
 	}
 }
 
-func (s *Server) managementAvailable(c *gin.Context) bool {
+func (s *Server) managementAvailable(c *web.Context) bool {
 	if s == nil || s.cfg == nil {
 		c.AbortWithStatus(http.StatusNotFound)
 		return false
@@ -249,7 +249,7 @@ func (s *Server) registeredManagementRouteKeys() map[string]struct{} {
 	return out
 }
 
-func (s *Server) pluginManagementNoRoute(c *gin.Context) {
+func (s *Server) pluginManagementNoRoute(c *web.Context) {
 	if s == nil || c == nil || c.Request == nil || c.Request.URL == nil {
 		if c != nil {
 			c.AbortWithStatus(http.StatusNotFound)
@@ -287,7 +287,7 @@ func (s *Server) pluginManagementNoRoute(c *gin.Context) {
 	c.AbortWithStatus(http.StatusNotFound)
 }
 
-func (s *Server) pluginResourceNoRoute(c *gin.Context) {
+func (s *Server) pluginResourceNoRoute(c *web.Context) {
 	if s == nil || c == nil || c.Request == nil || c.Request.URL == nil {
 		if c != nil {
 			c.AbortWithStatus(http.StatusNotFound)
@@ -305,7 +305,7 @@ func (s *Server) pluginResourceNoRoute(c *gin.Context) {
 	c.AbortWithStatus(http.StatusNotFound)
 }
 
-func (s *Server) serveManagementControlPanel(c *gin.Context) {
+func (s *Server) serveManagementControlPanel(c *web.Context) {
 	cfg := s.cfg
 	if cfg == nil || cfg.Home.Enabled || cfg.RemoteManagement.DisableControlPanel {
 		c.AbortWithStatus(http.StatusNotFound)

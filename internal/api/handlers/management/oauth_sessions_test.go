@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 )
 
@@ -96,7 +96,7 @@ func TestGetAuthStatusRejectsUnknownStateAndAcceptsCompletedState(t *testing.T) 
 	replaceOAuthSessionStoreForTest(t, store)
 
 	handler := &Handler{}
-	router := gin.New()
+	router := web.New()
 	router.GET("/status", handler.GetAuthStatus)
 
 	unknown := performOAuthStatusRequest(t, router, "unknown-state")
@@ -119,7 +119,7 @@ func TestOAuthCallbackRejectsCompletedSession(t *testing.T) {
 	store.Complete("completed-state")
 
 	handler := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: t.TempDir()}, nil)
-	router := gin.New()
+	router := web.New()
 	router.POST("/oauth-callback", handler.PostOAuthCallback)
 
 	req := httptest.NewRequest(
@@ -266,7 +266,7 @@ func TestCancelAuthSessionHandler(t *testing.T) {
 	store.Register("device-state", "xai")
 
 	handler := &Handler{}
-	router := gin.New()
+	router := web.New()
 	router.DELETE("/oauth-session", handler.CancelAuthSession)
 
 	missing := performOAuthCancelRequest(t, router, "")
@@ -293,7 +293,7 @@ func TestCancelAuthSessionHandler(t *testing.T) {
 	}
 
 	// Status after cancel should not report success.
-	statusRouter := gin.New()
+	statusRouter := web.New()
 	statusRouter.GET("/status", handler.GetAuthStatus)
 	unknown := performOAuthStatusRequest(t, statusRouter, "device-state")
 	if unknown.Status != "error" || unknown.Error != "unknown or expired state" {

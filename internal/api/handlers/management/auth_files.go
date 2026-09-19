@@ -12,11 +12,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/auth/codex"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/credentialweight"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
@@ -100,14 +100,14 @@ func parseLastRefreshValue(v any) (time.Time, bool) {
 	return time.Time{}, false
 }
 
-func (h *Handler) ListAuthFiles(c *gin.Context) {
+func (h *Handler) ListAuthFiles(c *web.Context) {
 	if h == nil {
-		c.JSON(500, gin.H{"error": "handler not initialized"})
+		c.JSON(500, web.H{"error": "handler not initialized"})
 		return
 	}
 	pagination, errPagination := parseAuthFilesPagination(c)
 	if errPagination != nil {
-		c.JSON(400, gin.H{"error": errPagination.Error()})
+		c.JSON(400, web.H{"error": errPagination.Error()})
 		return
 	}
 	if h.authManager == nil {
@@ -139,7 +139,7 @@ func (h *Handler) ListAuthFiles(c *gin.Context) {
 		})
 		total := len(matching)
 		start, end := pagination.bounds(total)
-		files := make([]gin.H, 0, end-start)
+		files := make([]web.H, 0, end-start)
 		for _, auth := range matching[start:end] {
 			if entry := h.buildAuthFileEntry(auth, quotaSupportedProviders); entry != nil {
 				entry["cooldowns"] = nil
@@ -152,7 +152,7 @@ func (h *Handler) ListAuthFiles(c *gin.Context) {
 		c.JSON(200, authFilesListResponse(observedAt, files, pagination, total, end))
 		return
 	}
-	files := make([]gin.H, 0, len(auths))
+	files := make([]web.H, 0, len(auths))
 	for _, auth := range auths {
 		if !matchesAuthFileLookup(auth, nameFilter, authIndexFilter) {
 			continue
@@ -170,10 +170,10 @@ func (h *Handler) ListAuthFiles(c *gin.Context) {
 		nameJ, _ := files[j]["name"].(string)
 		return strings.ToLower(nameI) < strings.ToLower(nameJ)
 	})
-	c.JSON(200, gin.H{"observed_at": observedAt, "files": files})
+	c.JSON(200, web.H{"observed_at": observedAt, "files": files})
 }
 
-func parseAuthFilesPagination(c *gin.Context) (authFilesPagination, error) {
+func parseAuthFilesPagination(c *web.Context) (authFilesPagination, error) {
 	pageRaw, hasPage := c.GetQuery("page")
 	pageSizeRaw, hasPageSize := c.GetQuery("page_size")
 	if !hasPage && !hasPageSize {
@@ -215,8 +215,8 @@ func (p authFilesPagination) bounds(total int) (int, int) {
 	return start, start + p.pageSize
 }
 
-func authFilesListResponse(observedAt time.Time, files []gin.H, pagination authFilesPagination, total, end int) gin.H {
-	response := gin.H{"observed_at": observedAt, "files": files}
+func authFilesListResponse(observedAt time.Time, files []web.H, pagination authFilesPagination, total, end int) web.H {
+	response := web.H{"observed_at": observedAt, "files": files}
 	if pagination.enabled {
 		response["total"] = total
 		response["page"] = pagination.page
@@ -330,10 +330,10 @@ func (h *Handler) lookupAuthFile(name string, authIndex string) (*coreauth.Auth,
 }
 
 // GetAuthFileModels returns the models supported by a specific auth file
-func (h *Handler) GetAuthFileModels(c *gin.Context) {
+func (h *Handler) GetAuthFileModels(c *web.Context) {
 	name := c.Query("name")
 	if name == "" {
-		c.JSON(400, gin.H{"error": "name is required"})
+		c.JSON(400, web.H{"error": "name is required"})
 		return
 	}
 
@@ -357,9 +357,9 @@ func (h *Handler) GetAuthFileModels(c *gin.Context) {
 	reg := registry.GetGlobalRegistry()
 	models := reg.GetModelsForClient(authID)
 
-	result := make([]gin.H, 0, len(models))
+	result := make([]web.H, 0, len(models))
 	for _, m := range models {
-		entry := gin.H{
+		entry := web.H{
 			"id": m.ID,
 		}
 		if m.DisplayName != "" {
@@ -374,21 +374,21 @@ func (h *Handler) GetAuthFileModels(c *gin.Context) {
 		result = append(result, entry)
 	}
 
-	c.JSON(200, gin.H{"models": result})
+	c.JSON(200, web.H{"models": result})
 }
 
 // List auth files from disk when the auth manager is unavailable.
-func (h *Handler) listAuthFilesFromDisk(c *gin.Context, pagination authFilesPagination) {
+func (h *Handler) listAuthFilesFromDisk(c *web.Context, pagination authFilesPagination) {
 	observedAt := time.Now().UTC()
 	nameFilter := strings.TrimSpace(c.Query("name"))
 	authIndexFilter := strings.TrimSpace(c.Query("auth_index"))
 	entries, err := os.ReadDir(h.cfg.AuthDir)
 	if err != nil {
-		c.JSON(500, gin.H{"error": fmt.Sprintf("failed to read auth dir: %v", err)})
+		c.JSON(500, web.H{"error": fmt.Sprintf("failed to read auth dir: %v", err)})
 		return
 	}
 	if authIndexFilter != "" {
-		c.JSON(200, authFilesListResponse(observedAt, []gin.H{}, pagination, 0, 0))
+		c.JSON(200, authFilesListResponse(observedAt, []web.H{}, pagination, 0, 0))
 		return
 	}
 	matching := make([]diskAuthFileCandidate, 0, len(entries))
@@ -412,10 +412,10 @@ func (h *Handler) listAuthFilesFromDisk(c *gin.Context, pagination authFilesPagi
 	if pagination.enabled {
 		start, end = pagination.bounds(total)
 	}
-	files := make([]gin.H, 0, end-start)
+	files := make([]web.H, 0, end-start)
 	for _, candidate := range matching[start:end] {
 		name := candidate.entry.Name()
-		fileData := gin.H{"name": name, "size": candidate.info.Size(), "modtime": candidate.info.ModTime(), "cooldowns": nil}
+		fileData := web.H{"name": name, "size": candidate.info.Size(), "modtime": candidate.info.ModTime(), "cooldowns": nil}
 
 		// Read file to get type field
 		full := filepath.Join(h.cfg.AuthDir, name)
@@ -478,7 +478,7 @@ func (h *Handler) listAuthFilesFromDisk(c *gin.Context, pagination authFilesPagi
 	c.JSON(200, authFilesListResponse(observedAt, files, pagination, total, end))
 }
 
-func (h *Handler) buildAuthFileEntry(auth *coreauth.Auth, quotaSupported ...map[string]struct{}) gin.H {
+func (h *Handler) buildAuthFileEntry(auth *coreauth.Auth, quotaSupported ...map[string]struct{}) web.H {
 	authFileEntryMu.Lock()
 	defer authFileEntryMu.Unlock()
 	return h.buildAuthFileEntryLocked(auth, quotaSupported...)
@@ -634,7 +634,7 @@ func reconcileAuthFileCooldownState(auth *coreauth.Auth, now time.Time) (unavail
 	return unavailable, status, statusMessage, nextRetry
 }
 
-func (h *Handler) buildAuthFileEntryLocked(auth *coreauth.Auth, quotaSupported ...map[string]struct{}) gin.H {
+func (h *Handler) buildAuthFileEntryLocked(auth *coreauth.Auth, quotaSupported ...map[string]struct{}) web.H {
 	if auth == nil {
 		return nil
 	}
@@ -652,7 +652,7 @@ func (h *Handler) buildAuthFileEntryLocked(auth *coreauth.Auth, quotaSupported .
 		name = auth.ID
 	}
 	unavailable, status, statusMessage, nextRetryAfter := reconcileAuthFileCooldownState(auth, time.Now().UTC())
-	entry := gin.H{
+	entry := web.H{
 		"id":             auth.ID,
 		"auth_index":     auth.Index,
 		"name":           name,
@@ -798,15 +798,15 @@ func authFileRequestRetryFromJSON(data []byte) (int, bool) {
 // quotaObservationPayload exposes only passive provider observations. Cooldown
 // fields are intentionally excluded so this management response cannot be
 // mistaken for scheduler state or influence scheduling behavior.
-func quotaObservationPayloadForProvider(provider string, quota coreauth.QuotaState) gin.H {
+func quotaObservationPayloadForProvider(provider string, quota coreauth.QuotaState) web.H {
 	if !coreauth.ProviderSupportsQuotaObservation(provider) {
 		return quotaObservationPayload(coreauth.QuotaState{})
 	}
 	return quotaObservationPayload(quota)
 }
 
-func quotaObservationPayload(quota coreauth.QuotaState) gin.H {
-	observed := gin.H{}
+func quotaObservationPayload(quota coreauth.QuotaState) web.H {
+	observed := web.H{}
 	if !quota.ObservedAt.IsZero() {
 		observed["observed_at"] = quota.ObservedAt
 	}
@@ -818,11 +818,11 @@ func quotaObservationPayload(quota coreauth.QuotaState) gin.H {
 	return observed
 }
 
-func modelQuotaObservationPayload(provider string, states map[string]*coreauth.ModelState) gin.H {
+func modelQuotaObservationPayload(provider string, states map[string]*coreauth.ModelState) web.H {
 	if !coreauth.ProviderSupportsQuotaObservation(provider) {
-		return gin.H{}
+		return web.H{}
 	}
-	observations := gin.H{}
+	observations := web.H{}
 	for model, state := range states {
 		if state == nil {
 			continue
@@ -904,7 +904,7 @@ func authProjectID(auth *coreauth.Auth) string {
 	return ""
 }
 
-func extractCodexIDTokenClaims(auth *coreauth.Auth) gin.H {
+func extractCodexIDTokenClaims(auth *coreauth.Auth) web.H {
 	if auth == nil || auth.Metadata == nil {
 		return nil
 	}
@@ -924,7 +924,7 @@ func extractCodexIDTokenClaims(auth *coreauth.Auth) gin.H {
 		return nil
 	}
 
-	result := gin.H{}
+	result := web.H{}
 	if v := strings.TrimSpace(claims.CodexAuthInfo.ChatgptAccountID); v != "" {
 		result["chatgpt_account_id"] = v
 	}

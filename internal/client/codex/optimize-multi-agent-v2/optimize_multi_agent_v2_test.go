@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
 	_ "github.com/router-for-me/CLIProxyAPI/v7/internal/translator"
@@ -376,7 +376,7 @@ func TestOptimizeCodexMultiAgentV2RequestSkipsPreparedToolRefresh(t *testing.T) 
 
 	request := httptest.NewRequest(http.MethodPost, "/v1/responses", nil)
 	request.Header.Set("User-Agent", "codex_cli_rs/0.144.1")
-	ginContext, _ := gin.CreateTestContext(httptest.NewRecorder())
+	ginContext, _ := web.CreateTestContext(httptest.NewRecorder())
 	ginContext.Request = request
 	ginContext.Set(CodexMultiAgentV2ToolsPreparedContextKey, true)
 	ctx := context.WithValue(context.Background(), "gin", ginContext)
@@ -698,10 +698,10 @@ func TestReplaceCodexSpawnAgentModelsNormalizesSectionsAndPreservesInstructions(
 }
 
 func TestCodexClientUserAgentPrefersGinRequest(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	request := httptest.NewRequest(http.MethodPost, "/v1/responses", nil)
 	request.Header.Set("User-Agent", "codex-tui/0.154.0")
-	ginCtx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	ginCtx, _ := web.CreateTestContext(httptest.NewRecorder())
 	ginCtx.Request = request
 	ctx := context.WithValue(context.Background(), "gin", ginCtx)
 	headers := http.Header{"User-Agent": []string{"overridden-client/1.0"}}

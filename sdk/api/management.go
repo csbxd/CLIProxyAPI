@@ -7,7 +7,7 @@ package api
 import (
 	"context"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	internalmanagement "github.com/router-for-me/CLIProxyAPI/v7/internal/api/handlers/management"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/config"
@@ -18,12 +18,12 @@ type Handler = internalmanagement.Handler
 
 // ManagementTokenRequester exposes a limited subset of management endpoints for requesting tokens.
 type ManagementTokenRequester interface {
-	RequestAnthropicToken(*gin.Context)
-	RequestCodexToken(*gin.Context)
-	RequestAntigravityToken(*gin.Context)
-	RequestKimiToken(*gin.Context)
-	GetAuthStatus(c *gin.Context)
-	PostOAuthCallback(c *gin.Context)
+	RequestAnthropicToken(*web.Context)
+	RequestCodexToken(*web.Context)
+	RequestAntigravityToken(*web.Context)
+	RequestKimiToken(*web.Context)
+	GetAuthStatus(c *web.Context)
+	PostOAuthCallback(c *web.Context)
 }
 
 type managementTokenRequester struct {
@@ -47,27 +47,27 @@ func NewManagementTokenRequester(cfg *config.Config, manager *coreauth.Manager) 
 	}
 }
 
-func (m *managementTokenRequester) RequestAnthropicToken(c *gin.Context) {
+func (m *managementTokenRequester) RequestAnthropicToken(c *web.Context) {
 	m.handler.RequestAnthropicToken(c)
 }
 
-func (m *managementTokenRequester) RequestCodexToken(c *gin.Context) {
+func (m *managementTokenRequester) RequestCodexToken(c *web.Context) {
 	m.handler.RequestCodexToken(c)
 }
 
-func (m *managementTokenRequester) RequestAntigravityToken(c *gin.Context) {
+func (m *managementTokenRequester) RequestAntigravityToken(c *web.Context) {
 	m.handler.RequestAntigravityToken(c)
 }
 
-func (m *managementTokenRequester) RequestKimiToken(c *gin.Context) {
+func (m *managementTokenRequester) RequestKimiToken(c *web.Context) {
 	m.handler.RequestKimiToken(c)
 }
 
-func (m *managementTokenRequester) GetAuthStatus(c *gin.Context) {
+func (m *managementTokenRequester) GetAuthStatus(c *web.Context) {
 	m.handler.GetAuthStatus(c)
 }
 
-func (m *managementTokenRequester) PostOAuthCallback(c *gin.Context) {
+func (m *managementTokenRequester) PostOAuthCallback(c *web.Context) {
 	m.handler.PostOAuthCallback(c)
 }
 
@@ -127,6 +127,6 @@ func WriteOAuthCallbackFileForPendingSession(authDir, provider, state, code, err
 }
 
 // PopulateAuthContext copies auth metadata from a Gin context into a request context.
-func PopulateAuthContext(ctx context.Context, c *gin.Context) context.Context {
+func PopulateAuthContext(ctx context.Context, c *web.Context) context.Context {
 	return internalmanagement.PopulateAuthContext(ctx, c)
 }

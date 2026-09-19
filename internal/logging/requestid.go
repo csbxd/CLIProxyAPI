@@ -5,7 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 )
 
 // requestIDKey is the context key for storing/retrieving request IDs.
@@ -41,14 +41,14 @@ func GetRequestID(ctx context.Context) string {
 }
 
 // SetGinRequestID stores the request ID in the Gin context.
-func SetGinRequestID(c *gin.Context, requestID string) {
+func SetGinRequestID(c *web.Context, requestID string) {
 	if c != nil {
 		c.Set(ginRequestIDKey, requestID)
 	}
 }
 
 // GetGinRequestID retrieves the request ID from the Gin context.
-func GetGinRequestID(c *gin.Context) string {
+func GetGinRequestID(c *web.Context) string {
 	if c == nil {
 		return ""
 	}

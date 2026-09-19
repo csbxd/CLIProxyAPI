@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	internallogging "github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
 	coresession "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/session"
 	coreusage "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/usage"
@@ -397,12 +397,12 @@ func withEnabledQueue(t *testing.T, fn func()) {
 	fn()
 }
 
-func newTestGinContext(t *testing.T, method, path string, status int) *gin.Context {
+func newTestGinContext(t *testing.T, method, path string, status int) *web.Context {
 	t.Helper()
 
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	ginCtx, _ := gin.CreateTestContext(recorder)
+	ginCtx, _ := web.CreateTestContext(recorder)
 	ginCtx.Request = httptest.NewRequest(method, "http://example.com"+path, nil)
 	if status != 0 {
 		ginCtx.Status(status)

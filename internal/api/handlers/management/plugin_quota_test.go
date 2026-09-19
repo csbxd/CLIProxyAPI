@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/pluginhost"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
@@ -79,7 +79,7 @@ func TestGetQuotaProviders_Endpoint(t *testing.T) {
 
 	// Case 1: No plugin host
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodGet, "/v0/management/quota/providers", nil)
 	h.GetQuotaProviders(ctx)
 
@@ -106,7 +106,7 @@ func TestGetQuotaProviders_Endpoint(t *testing.T) {
 	h.SetPluginHost(host)
 
 	rec2 := httptest.NewRecorder()
-	ctx2, _ := gin.CreateTestContext(rec2)
+	ctx2, _ := web.CreateTestContext(rec2)
 	ctx2.Request = httptest.NewRequest(http.MethodGet, "/v0/management/quota/providers", nil)
 	h.GetQuotaProviders(ctx2)
 
@@ -149,7 +149,7 @@ func TestFetchCredentialQuota_Endpoint(t *testing.T) {
 
 	// Missing auth_index -> 400
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPost, "/v0/management/quota/fetch", strings.NewReader(`{}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 	h.FetchCredentialQuota(ctx)
@@ -159,7 +159,7 @@ func TestFetchCredentialQuota_Endpoint(t *testing.T) {
 
 	// Unknown auth_index -> 404
 	recNotFound := httptest.NewRecorder()
-	ctxNotFound, _ := gin.CreateTestContext(recNotFound)
+	ctxNotFound, _ := web.CreateTestContext(recNotFound)
 	ctxNotFound.Request = httptest.NewRequest(http.MethodPost, "/v0/management/quota/fetch", strings.NewReader(`{"auth_index":"non-existent"}`))
 	ctxNotFound.Request.Header.Set("Content-Type", "application/json")
 	h.FetchCredentialQuota(ctxNotFound)
@@ -169,7 +169,7 @@ func TestFetchCredentialQuota_Endpoint(t *testing.T) {
 
 	// Valid auth_index -> 200 with normalized shape
 	recSuccess := httptest.NewRecorder()
-	ctxSuccess, _ := gin.CreateTestContext(recSuccess)
+	ctxSuccess, _ := web.CreateTestContext(recSuccess)
 	ctxSuccess.Request = httptest.NewRequest(http.MethodPost, "/v0/management/quota/fetch", strings.NewReader(`{"auth_index":"`+authIndex+`"}`))
 	ctxSuccess.Request.Header.Set("Content-Type", "application/json")
 	h.FetchCredentialQuota(ctxSuccess)
@@ -225,7 +225,7 @@ func TestResetCredentialQuota_Endpoint(t *testing.T) {
 	h.SetPluginHost(host)
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPost, "/v0/management/quota/reset", strings.NewReader(`{"auth_index":"`+authIndex+`"}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 	h.ResetCredentialQuota(ctx)
@@ -273,8 +273,8 @@ func TestPluginSpecificQuotaEndpoints(t *testing.T) {
 
 	// GET /v0/management/plugins/:id/quota?auth_index=...
 	recGet := httptest.NewRecorder()
-	ctxGet, _ := gin.CreateTestContext(recGet)
-	ctxGet.Params = gin.Params{{Key: "id", Value: "workbuddy-plugin"}}
+	ctxGet, _ := web.CreateTestContext(recGet)
+	ctxGet.Params = web.Params{{Key: "id", Value: "workbuddy-plugin"}}
 	ctxGet.Request = httptest.NewRequest(http.MethodGet, "/v0/management/plugins/workbuddy-plugin/quota?auth_index="+authIndex, nil)
 	h.GetPluginQuota(ctxGet)
 	if recGet.Code != http.StatusOK {
@@ -283,8 +283,8 @@ func TestPluginSpecificQuotaEndpoints(t *testing.T) {
 
 	// POST /v0/management/plugins/:id/quota
 	recPost := httptest.NewRecorder()
-	ctxPost, _ := gin.CreateTestContext(recPost)
-	ctxPost.Params = gin.Params{{Key: "id", Value: "workbuddy-plugin"}}
+	ctxPost, _ := web.CreateTestContext(recPost)
+	ctxPost.Params = web.Params{{Key: "id", Value: "workbuddy-plugin"}}
 	ctxPost.Request = httptest.NewRequest(http.MethodPost, "/v0/management/plugins/workbuddy-plugin/quota", strings.NewReader(`{"auth_index":"`+authIndex+`"}`))
 	ctxPost.Request.Header.Set("Content-Type", "application/json")
 	h.FetchPluginQuota(ctxPost)
@@ -294,8 +294,8 @@ func TestPluginSpecificQuotaEndpoints(t *testing.T) {
 
 	// DELETE /v0/management/plugins/:id/quota
 	recDel := httptest.NewRecorder()
-	ctxDel, _ := gin.CreateTestContext(recDel)
-	ctxDel.Params = gin.Params{{Key: "id", Value: "workbuddy-plugin"}}
+	ctxDel, _ := web.CreateTestContext(recDel)
+	ctxDel.Params = web.Params{{Key: "id", Value: "workbuddy-plugin"}}
 	ctxDel.Request = httptest.NewRequest(http.MethodDelete, "/v0/management/plugins/workbuddy-plugin/quota?auth_index="+authIndex, nil)
 	h.ResetPluginQuota(ctxDel)
 	if recDel.Code != http.StatusOK {
@@ -344,7 +344,7 @@ func TestAuthFilesList_IncludesQuotaSupport(t *testing.T) {
 	h.SetPluginHost(host)
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodGet, "/v0/management/auth-files", nil)
 	h.ListAuthFiles(ctx)
 
@@ -429,7 +429,7 @@ func TestResetCredentialQuota_FailureDoesNotClearCooldown(t *testing.T) {
 	h.SetPluginHost(host)
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPost, "/v0/management/quota/reset", strings.NewReader(`{"auth_index":"`+authIndex+`"}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 	h.ResetCredentialQuota(ctx)
@@ -490,7 +490,7 @@ func TestFetchCredentialQuota_DeclarativeProbe(t *testing.T) {
 	h.SetPluginHost(pluginhost.New())
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPost, "/v0/management/quota/fetch", strings.NewReader(`{"auth_index":"`+authIndex+`"}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 	h.FetchCredentialQuota(ctx)
@@ -531,7 +531,7 @@ func TestFetchCredentialQuota_DeclarativeProbeSummaryOnly(t *testing.T) {
 	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: t.TempDir()}, manager)
 	h.SetPluginHost(pluginhost.New())
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPost, "/v0/management/quota/fetch", strings.NewReader(`{"auth_index":"`+authIndex+`"}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 	h.FetchCredentialQuota(ctx)
@@ -564,7 +564,7 @@ func TestExecuteQuotaProbeStripsSummaryKeyCaseInsensitively(t *testing.T) {
 
 	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: t.TempDir()}, nil)
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodGet, "/probe", nil)
 
 	quotaResp, handled, errProbe := h.executeQuotaProbe(ctx, &coreauth.Auth{}, map[string]any{
@@ -634,7 +634,7 @@ func TestFetchCredentialQuota_DeclarativeProbeSummaryWithoutValueReturnsError(t 
 	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: t.TempDir()}, manager)
 	h.SetPluginHost(pluginhost.New())
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPost, "/v0/management/quota/fetch", strings.NewReader(`{"auth_index":"`+authIndex+`"}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 	h.FetchCredentialQuota(ctx)
@@ -664,7 +664,7 @@ func TestFetchCredentialQuota_DeclarativeProbeIgnoresMalformedOptionalSummary(t 
 	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: t.TempDir()}, manager)
 	h.SetPluginHost(pluginhost.New())
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPost, "/v0/management/quota/fetch", strings.NewReader(`{"auth_index":"`+authIndex+`"}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 	h.FetchCredentialQuota(ctx)
@@ -735,7 +735,7 @@ func TestFetchCredentialQuota_DeclarativeProbeWithMapping(t *testing.T) {
 	h.SetPluginHost(pluginhost.New())
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPost, "/v0/management/quota/fetch", strings.NewReader(`{"auth_index":"`+authIndex+`"}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 	h.FetchCredentialQuota(ctx)
@@ -797,7 +797,7 @@ func TestFetchCredentialQuota_DeclarativeProbeInvalidReturnsError(t *testing.T) 
 	h.SetPluginHost(pluginhost.New())
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPost, "/v0/management/quota/fetch", strings.NewReader(`{"auth_index":"`+authIndex+`"}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 	h.FetchCredentialQuota(ctx)
@@ -847,7 +847,7 @@ func TestFetchCredentialQuota_DeclarativeProbeMissingPathReturnsError(t *testing
 	h.SetPluginHost(pluginhost.New())
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPost, "/v0/management/quota/fetch", strings.NewReader(`{"auth_index":"`+authIndex+`"}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 	h.FetchCredentialQuota(ctx)
@@ -886,7 +886,7 @@ func TestFetchCredentialQuota_DeclarativeProbeNonJSONWithMappingReturnsError(t *
 	h.SetPluginHost(pluginhost.New())
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPost, "/v0/management/quota/fetch", strings.NewReader(`{"auth_index":"`+authIndex+`"}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 	h.FetchCredentialQuota(ctx)
@@ -923,7 +923,7 @@ func TestFetchCredentialQuota_MalformedNormalizedGroupsReturnsError(t *testing.T
 	h.SetPluginHost(pluginhost.New())
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPost, "/v0/management/quota/fetch", strings.NewReader(`{"auth_index":"`+authIndex+`"}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 	h.FetchCredentialQuota(ctx)
@@ -977,7 +977,7 @@ func TestFetchCredentialQuota_NonNumericFractionReturnsError(t *testing.T) {
 	h.SetPluginHost(pluginhost.New())
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPost, "/v0/management/quota/fetch", strings.NewReader(`{"auth_index":"`+authIndex+`"}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 	h.FetchCredentialQuota(ctx)
@@ -1014,7 +1014,7 @@ func TestFetchCredentialQuota_EmptyBucketsNormalizedReturnsError(t *testing.T) {
 	h.SetPluginHost(pluginhost.New())
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPost, "/v0/management/quota/fetch", strings.NewReader(`{"auth_index":"`+authIndex+`"}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 	h.FetchCredentialQuota(ctx)
@@ -1051,7 +1051,7 @@ func TestFetchCredentialQuota_LegitimateZeroQuotaAccepted(t *testing.T) {
 	h.SetPluginHost(pluginhost.New())
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPost, "/v0/management/quota/fetch", strings.NewReader(`{"auth_index":"`+authIndex+`"}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 	h.FetchCredentialQuota(ctx)
@@ -1095,7 +1095,7 @@ func TestFetchCredentialQuota_WindowOnlyBucketReturnsError(t *testing.T) {
 	h.SetPluginHost(pluginhost.New())
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPost, "/v0/management/quota/fetch", strings.NewReader(`{"auth_index":"`+authIndex+`"}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 	h.FetchCredentialQuota(ctx)
@@ -1135,7 +1135,7 @@ func TestFetchCredentialQuota_MixedValidAndInvalidBuckets(t *testing.T) {
 	h.SetPluginHost(pluginhost.New())
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPost, "/v0/management/quota/fetch", strings.NewReader(`{"auth_index":"`+authIndex+`"}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 	h.FetchCredentialQuota(ctx)
@@ -1191,7 +1191,7 @@ func TestFetchCredentialQuota_MissingTokenDoesNotHitUpstream(t *testing.T) {
 	h.SetPluginHost(pluginhost.New())
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPost, "/v0/management/quota/fetch", strings.NewReader(`{"auth_index":"`+authIndex+`"}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 	h.FetchCredentialQuota(ctx)

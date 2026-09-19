@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	internalcache "github.com/router-for-me/CLIProxyAPI/v7/internal/cache"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	_ "github.com/router-for-me/CLIProxyAPI/v7/internal/translator"
@@ -300,7 +300,7 @@ func TestCodexExecutorReasoningReplayCacheSharesSameSessionAcrossCodexAuths(t *t
 
 func codexReplaySessionOnlyContext(apiKey string) context.Context {
 	recorder := httptest.NewRecorder()
-	ginCtx, _ := gin.CreateTestContext(recorder)
+	ginCtx, _ := web.CreateTestContext(recorder)
 	ginCtx.Set("userApiKey", apiKey)
 	ginCtx.Set("accessProvider", "config-inline")
 	ginCtx.Request = httptest.NewRequest("POST", "/v1/messages", nil)

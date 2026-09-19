@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
 	apihandlers "github.com/router-for-me/CLIProxyAPI/v7/sdk/api/handlers"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
@@ -20,11 +20,11 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-func performVideosEndpointRequest(t *testing.T, method string, endpointPath string, contentType string, body io.Reader, handler gin.HandlerFunc) *httptest.ResponseRecorder {
+func performVideosEndpointRequest(t *testing.T, method string, endpointPath string, contentType string, body io.Reader, handler web.HandlerFunc) *httptest.ResponseRecorder {
 	t.Helper()
 
-	gin.SetMode(gin.TestMode)
-	router := gin.New()
+	web.SetMode(web.TestMode)
+	router := web.New()
 	switch method {
 	case http.MethodGet:
 		router.GET(endpointPath, handler)
@@ -41,11 +41,11 @@ func performVideosEndpointRequest(t *testing.T, method string, endpointPath stri
 	return resp
 }
 
-func performVideosRouteRequest(t *testing.T, method string, routePath string, requestPath string, contentType string, body io.Reader, handler gin.HandlerFunc) *httptest.ResponseRecorder {
+func performVideosRouteRequest(t *testing.T, method string, routePath string, requestPath string, contentType string, body io.Reader, handler web.HandlerFunc) *httptest.ResponseRecorder {
 	t.Helper()
 
-	gin.SetMode(gin.TestMode)
-	router := gin.New()
+	web.SetMode(web.TestMode)
+	router := web.New()
 	switch method {
 	case http.MethodGet:
 		router.GET(routePath, handler)
@@ -479,9 +479,9 @@ func TestWriteVideoContentFromURL(t *testing.T) {
 	}))
 	defer upstream.Close()
 
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	resp := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(resp)
+	ctx, _ := web.CreateTestContext(resp)
 	ctx.Request = httptest.NewRequest(http.MethodGet, "/openai/v1/videos/video_123/content", nil)
 
 	base := apihandlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, nil)
@@ -529,10 +529,10 @@ func TestWriteVideoContentFromURLUsesPinnedAuthProxy(t *testing.T) {
 	handler := NewOpenAIAPIHandler(base)
 	videoAuthBindings.set("video_123", authID, time.Hour)
 
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	resp := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(resp)
-	ctx.Params = gin.Params{{Key: "video_id", Value: "video_123"}}
+	ctx, _ := web.CreateTestContext(resp)
+	ctx.Params = web.Params{{Key: "video_id", Value: "video_123"}}
 	ctx.Request = httptest.NewRequest(http.MethodGet, "/openai/v1/videos/video_123/content", nil)
 
 	if err := handler.writeVideoContentFromURL(ctx, upstream.URL+"/video.mp4"); err != nil {
@@ -558,10 +558,10 @@ func TestWriteVideoContentFromURLFallsBackToGlobalProxy(t *testing.T) {
 	base := apihandlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{ProxyURL: "http://global-proxy.example.com:8080"}, nil)
 	handler := NewOpenAIAPIHandler(base)
 
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	resp := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(resp)
-	ctx.Params = gin.Params{{Key: "video_id", Value: "video_456"}}
+	ctx, _ := web.CreateTestContext(resp)
+	ctx.Params = web.Params{{Key: "video_id", Value: "video_456"}}
 	ctx.Request = httptest.NewRequest(http.MethodGet, "/openai/v1/videos/video_456/content", nil)
 
 	client := handler.videoContentHTTPClient(ctx)
@@ -1039,11 +1039,11 @@ func TestVideosCreateFormRequest(t *testing.T) {
 }
 
 func videosCreateRequestFromFormContext(body string) ([]byte, error) {
-	gin.SetMode(gin.TestMode)
-	router := gin.New()
+	web.SetMode(web.TestMode)
+	router := web.New()
 	var rawJSON []byte
 	var err error
-	router.POST(videosPath, func(c *gin.Context) {
+	router.POST(videosPath, func(c *web.Context) {
 		rawJSON, err = videosCreateRequestFromForm(c)
 	})
 	req := httptest.NewRequest(http.MethodPost, videosPath, strings.NewReader(body))

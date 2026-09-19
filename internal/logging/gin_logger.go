@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/util"
 	log "github.com/sirupsen/logrus"
 )
@@ -37,9 +37,9 @@ const (
 // Output format (others): [2025-12-23 20:14:10] [info ] | -------- | 200 |       23.559s | ...
 //
 // Returns:
-//   - gin.HandlerFunc: A middleware handler for request logging
-func GinLogrusLogger() gin.HandlerFunc {
-	return func(c *gin.Context) {
+//   - web.HandlerFunc: A middleware handler for request logging
+func GinLogrusLogger() web.HandlerFunc {
+	return func(c *web.Context) {
 		start := time.Now()
 		path := c.Request.URL.Path
 		raw := util.MaskSensitiveQuery(c.Request.URL.RawQuery)
@@ -79,7 +79,7 @@ func GinLogrusLogger() gin.HandlerFunc {
 		statusCode := c.Writer.Status()
 		clientIP := c.ClientIP()
 		method := c.Request.Method
-		errorMessage := c.Errors.ByType(gin.ErrorTypePrivate).String()
+		errorMessage := c.Errors.ByType(web.ErrorTypePrivate).String()
 
 		if requestID == "" {
 			requestID = "--------"
@@ -120,9 +120,9 @@ func isAIAPIPath(path string) bool {
 // and request path, then returns a 500 Internal Server Error response to the client.
 //
 // Returns:
-//   - gin.HandlerFunc: A middleware handler for panic recovery
-func GinLogrusRecovery() gin.HandlerFunc {
-	return gin.CustomRecovery(func(c *gin.Context, recovered interface{}) {
+//   - web.HandlerFunc: A middleware handler for panic recovery
+func GinLogrusRecovery() web.HandlerFunc {
+	return web.CustomRecovery(func(c *web.Context, recovered interface{}) {
 		if err, ok := recovered.(error); ok && errors.Is(err, http.ErrAbortHandler) {
 			// Let net/http handle ErrAbortHandler so the connection is aborted without noisy stack logs.
 			panic(http.ErrAbortHandler)
@@ -140,14 +140,14 @@ func GinLogrusRecovery() gin.HandlerFunc {
 
 // SkipGinRequestLogging marks the provided Gin context so that GinLogrusLogger
 // will skip emitting a log line for the associated request.
-func SkipGinRequestLogging(c *gin.Context) {
+func SkipGinRequestLogging(c *web.Context) {
 	if c == nil {
 		return
 	}
 	c.Set(skipGinLogKey, true)
 }
 
-func shouldSkipGinRequestLogging(c *gin.Context) bool {
+func shouldSkipGinRequestLogging(c *web.Context) bool {
 	if c == nil {
 		return false
 	}
@@ -159,7 +159,7 @@ func shouldSkipGinRequestLogging(c *gin.Context) bool {
 	return ok && flag
 }
 
-func creditsUsed(c *gin.Context) bool {
+func creditsUsed(c *web.Context) bool {
 	if c == nil {
 		return false
 	}

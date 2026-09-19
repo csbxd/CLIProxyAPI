@@ -10,7 +10,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/api/handlers"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
@@ -50,7 +50,7 @@ func (*initialFailureStreamExecutor) HttpRequest(context.Context, *coreauth.Auth
 }
 
 func runOpenAIStreamErrorTest(t *testing.T, endpoint string, body string) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	var wg sync.WaitGroup
 	for i := 0; i < 100; i++ {
@@ -71,7 +71,7 @@ func runOpenAIStreamErrorTest(t *testing.T, endpoint string, body string) {
 
 			base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 			h := NewOpenAIAPIHandler(base)
-			router := gin.New()
+			router := web.New()
 			if endpoint == "/v1/chat/completions" {
 				router.POST(endpoint, h.ChatCompletions)
 			} else {

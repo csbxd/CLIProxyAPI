@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/api/handlers"
 	sdkconfig "github.com/router-for-me/CLIProxyAPI/v7/sdk/config"
@@ -24,7 +24,7 @@ func TestClaudeModelsResponseUsesConfiguredDisplayName(t *testing.T) {
 	})
 
 	recorder := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(recorder)
+	ctx, _ := web.CreateTestContext(recorder)
 	NewClaudeCodeAPIHandler(&handlers.BaseAPIHandler{}).ClaudeModels(ctx)
 
 	var response struct {
@@ -59,7 +59,7 @@ func TestClaudeModelsResponseDisablesModelListCloaking(t *testing.T) {
 	})
 
 	recorder := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(recorder)
+	ctx, _ := web.CreateTestContext(recorder)
 	baseHandler := &handlers.BaseAPIHandler{Cfg: &sdkconfig.SDKConfig{
 		ClaudeCode: sdkconfig.ClaudeCodeConfig{DisableCloakingModelList: true},
 	}}

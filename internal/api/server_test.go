@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	gin "github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	managementHandlers "github.com/router-for-me/CLIProxyAPI/v7/internal/api/handlers/management"
 	claudemodels "github.com/router-for-me/CLIProxyAPI/v7/internal/client/claude/models"
 	codexmodels "github.com/router-for-me/CLIProxyAPI/v7/internal/client/codex/models"
@@ -92,11 +92,11 @@ func (e *codexSearchCaptureExecutor) PrepareRequest(req *http.Request, a *auth.A
 }
 
 type codexSearchGinContextSelector struct {
-	ginContext *gin.Context
+	ginContext *web.Context
 }
 
 func (s *codexSearchGinContextSelector) Pick(ctx context.Context, _ string, _ string, _ coreexecutor.Options, auths []*auth.Auth) (*auth.Auth, error) {
-	s.ginContext, _ = ctx.Value("gin").(*gin.Context)
+	s.ginContext, _ = ctx.Value("gin").(*web.Context)
 	if len(auths) == 0 {
 		return nil, nil
 	}
@@ -416,7 +416,7 @@ func TestHomeCodexAlphaSearchForwardsUnauthorizedResponseWithoutRefresh(t *testi
 	req := httptest.NewRequest(http.MethodPost, "/v1/alpha/search", strings.NewReader(`{"id":"home-search-refresh","model":"gpt-5-codex","query":"test"}`))
 	req.Header.Set("Authorization", "Bearer test-key")
 	rr := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rr)
+	c, _ := web.CreateTestContext(rr)
 	c.Request = req
 	server.codexAlphaSearch(c)
 
@@ -520,7 +520,7 @@ func TestHomeCodexAlphaSearchRequestLogPreservesBodyReturnedWithReadError(t *tes
 	})
 
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 	c.Request = httptest.NewRequest(http.MethodPost, "/v1/alpha/search", strings.NewReader(`{"model":"gpt-5-codex","query":"test"}`))
 	server.codexAlphaSearch(c)
 
@@ -608,7 +608,7 @@ func newTestServer(t *testing.T) *Server {
 func newTestServerWithOptions(t *testing.T, opts ...ServerOption) *Server {
 	t.Helper()
 
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	tmpDir := t.TempDir()
 	authDir := filepath.Join(tmpDir, "auth")
@@ -1478,7 +1478,7 @@ func TestCodexAlphaSearchRecordsRequestLog(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rr)
+	c, _ := web.CreateTestContext(rr)
 	req := httptest.NewRequest(http.MethodPost, "/v1/alpha/search", strings.NewReader(`{"query":"GPT-5.6"}`))
 	req.Header.Set("Authorization", "Bearer test-key")
 	req.Header.Set("Content-Type", "application/json")
@@ -2880,7 +2880,7 @@ func (e *mockServerStreamingCaptureExecutor) HttpRequest(_ context.Context, _ *a
 }
 
 func TestServerResponsesStreamingRequestLogCapturesUpstreamSections(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	tmpDir := t.TempDir()
 	logsDir := filepath.Join(tmpDir, "logs")
@@ -2973,7 +2973,7 @@ func TestServerResponsesStreamingRequestLogCapturesUpstreamSections(t *testing.T
 }
 
 func TestServerCodexAPIKeyResponsesStreamingRequestLog(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	upstreamReceived := make(chan struct{}, 1)
 	mockUpstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

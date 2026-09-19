@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/api/handlers"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
@@ -48,7 +48,7 @@ func (*reproOAuthExecutor) HttpRequest(context.Context, *coreauth.Auth, *http.Re
 }
 
 func TestReproPermanentOAuthFailureClassification(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	for _, stream := range []bool{false, true} {
 		t.Run(fmt.Sprintf("stream=%t", stream), func(t *testing.T) {
 			model := fmt.Sprintf("repro-permanent-oauth-%t", stream)
@@ -80,7 +80,7 @@ func TestReproPermanentOAuthFailureClassification(t *testing.T) {
 				registry.GetGlobalRegistry().UnregisterClient(healthyID)
 			})
 			base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
-			router := gin.New()
+			router := web.New()
 			router.POST("/v1/responses", NewOpenAIResponsesAPIHandler(base).Responses)
 			request := func() *httptest.ResponseRecorder {
 				body := fmt.Sprintf(`{"model":%q,"input":"fixture","stream":%t}`, model, stream)

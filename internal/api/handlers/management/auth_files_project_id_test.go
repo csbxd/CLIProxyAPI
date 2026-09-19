@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 )
@@ -127,7 +127,7 @@ func firstAuthFileEntry(t *testing.T, h *Handler) map[string]any {
 	t.Helper()
 
 	rec := httptest.NewRecorder()
-	ginCtx, _ := gin.CreateTestContext(rec)
+	ginCtx, _ := web.CreateTestContext(rec)
 	ginCtx.Request = httptest.NewRequest(http.MethodGet, "/v0/management/auth-files", nil)
 
 	h.ListAuthFiles(ginCtx)

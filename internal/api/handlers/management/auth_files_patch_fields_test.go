@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	fileauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/auth"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
@@ -47,7 +47,7 @@ func TestPatchAuthFileFields_MergeHeadersAndDeleteEmptyValues(t *testing.T) {
 
 	body := `{"name":"test.json","prefix":"p1","proxy_url":"http://proxy.local","headers":{"X-Old":"new","X-New":"v","X-Remove":"  ","X-Nope":""}}`
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/fields", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	ctx.Request = req
@@ -139,7 +139,7 @@ func TestPatchAuthFileFields_HeadersEmptyMapIsNoop(t *testing.T) {
 
 	body := `{"name":"noop.json","note":"hello","headers":{}}`
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/fields", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	ctx.Request = req
@@ -191,7 +191,7 @@ func TestPatchAuthFileFields_WebsocketsFalseIsUpdate(t *testing.T) {
 
 	body := `{"name":"codex.json","websockets":false}`
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/fields", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	ctx.Request = req
@@ -241,7 +241,7 @@ func TestPatchAuthFileFields_ArbitraryFieldsPersistToFile(t *testing.T) {
 
 	body := `{"name":"generic.json","abc":true,"nested.cde":true,"fgh":{"ijk":true}}`
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/fields", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	ctx.Request = req
@@ -302,7 +302,7 @@ func TestPatchAuthFileFields_WeightPersistsAndSyncsRuntime(t *testing.T) {
 	patch := func(weight string) *httptest.ResponseRecorder {
 		t.Helper()
 		rec := httptest.NewRecorder()
-		ctx, _ := gin.CreateTestContext(rec)
+		ctx, _ := web.CreateTestContext(rec)
 		body := `{"name":"weighted.json","weight":` + weight + `}`
 		ctx.Request = httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/fields", strings.NewReader(body))
 		ctx.Request.Header.Set("Content-Type", "application/json")
@@ -360,7 +360,7 @@ func TestPatchAuthFileFields_RejectsInvalidWeights(t *testing.T) {
 
 	for _, weight := range []string{"1.5", "1000001", "9223372036854775808", `"7"`} {
 		rec := httptest.NewRecorder()
-		ctx, _ := gin.CreateTestContext(rec)
+		ctx, _ := web.CreateTestContext(rec)
 		body := `{"name":"auth.json","weight":` + weight + `}`
 		ctx.Request = httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/fields", strings.NewReader(body))
 		ctx.Request.Header.Set("Content-Type", "application/json")
@@ -393,7 +393,7 @@ func TestPatchAuthFileFields_RequestRetryRoundTrip(t *testing.T) {
 	}
 
 	handler := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: authDir}, manager)
-	engine := gin.New()
+	engine := web.New()
 	engine.GET("/auth-files", handler.ListAuthFiles)
 	engine.PATCH("/auth-files/fields", handler.PatchAuthFileFields)
 
@@ -638,7 +638,7 @@ func TestPatchAuthFileFields_SyncsPlanTypeAndInvokesHook(t *testing.T) {
 	body := fmt.Sprintf(`{"name":%q,"id_token":%q}`, fileName, teamIDToken)
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/fields", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	ctx.Request = req
@@ -695,7 +695,7 @@ func TestPatchAuthFileFields_ClearsPlanTypeWhenRemoved(t *testing.T) {
 	body := fmt.Sprintf(`{"name":%q,"plan_type":null}`, fileName)
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/fields", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	ctx.Request = req

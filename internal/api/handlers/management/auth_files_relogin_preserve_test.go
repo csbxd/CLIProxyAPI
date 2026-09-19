@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/auth/claude"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/auth/codex"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
@@ -255,7 +255,7 @@ func TestSaveTokenRecord_MigratesMatchingLegacyClaudeCredential(t *testing.T) {
 }
 
 func TestPatchAuthFileFields_DeletesPluginFields(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	authDir := t.TempDir()
 	fileName := "plugin-auth.json"
 	filePath := filepath.Join(authDir, fileName)
@@ -297,7 +297,7 @@ func TestPatchAuthFileFields_DeletesPluginFields(t *testing.T) {
 
 	// Patch weight: null to delete weight
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
+	c, _ := web.CreateTestContext(rec)
 	body := `{"name":"plugin-auth.json","weight":null}`
 	c.Request = httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/fields", strings.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")

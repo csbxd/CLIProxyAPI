@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -25,7 +25,7 @@ type callbackForwarder struct {
 	done     chan struct{}
 }
 
-func isWebUIRequest(c *gin.Context) bool {
+func isWebUIRequest(c *web.Context) bool {
 	raw := strings.TrimSpace(c.Query("is_webui"))
 	if raw == "" {
 		return false
@@ -169,7 +169,7 @@ func pluginAuthProviderFromPath(path string) (string, bool) {
 	return provider, true
 }
 
-func (h *Handler) ServePluginAuthURL(c *gin.Context) bool {
+func (h *Handler) ServePluginAuthURL(c *web.Context) bool {
 	if h == nil || c == nil || c.Request == nil || c.Request.URL == nil {
 		return false
 	}
@@ -188,7 +188,7 @@ func (h *Handler) ServePluginAuthURL(c *gin.Context) bool {
 	baseURL, errBaseURL := h.managementCallbackURL("/v0/management/oauth-callback")
 	if errBaseURL != nil {
 		log.WithError(errBaseURL).Error("failed to compute plugin auth callback URL")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate authorization url"})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "failed to generate authorization url"})
 		return true
 	}
 	metadata := queryValuesToMetadata(c.Request.URL.Query())
@@ -198,26 +198,26 @@ func (h *Handler) ServePluginAuthURL(c *gin.Context) bool {
 	}
 	if errStart != nil {
 		log.WithError(errStart).Error("failed to start plugin auth login")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate authorization url"})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "failed to generate authorization url"})
 		return true
 	}
 	state := strings.TrimSpace(resp.State)
 	if state == "" {
 		log.WithField("provider", provider).Error("plugin auth provider returned empty state")
-		c.JSON(http.StatusBadGateway, gin.H{"error": "invalid oauth state"})
+		c.JSON(http.StatusBadGateway, web.H{"error": "invalid oauth state"})
 		return true
 	}
 	if errState := ValidateOAuthState(state); errState != nil {
 		log.WithError(errState).WithField("provider", provider).Error("plugin auth provider returned invalid state")
-		c.JSON(http.StatusBadGateway, gin.H{"error": "invalid oauth state"})
+		c.JSON(http.StatusBadGateway, web.H{"error": "invalid oauth state"})
 		return true
 	}
 	if errRegister := RegisterPluginOAuthSession(state, provider, resp.Metadata); errRegister != nil {
 		log.WithError(errRegister).WithField("provider", provider).Error("failed to register plugin oauth session")
-		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to generate authorization url"})
+		c.JSON(http.StatusBadGateway, web.H{"error": "failed to generate authorization url"})
 		return true
 	}
-	c.JSON(http.StatusOK, gin.H{"status": "ok", "url": resp.URL, "state": state})
+	c.JSON(http.StatusOK, web.H{"status": "ok", "url": resp.URL, "state": state})
 	return true
 }
 

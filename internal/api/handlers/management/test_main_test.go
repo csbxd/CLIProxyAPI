@@ -4,10 +4,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 )
 
 func TestMain(m *testing.M) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	os.Exit(m.Run())
 }

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 )
 
@@ -28,9 +28,9 @@ func parseCredentialWeightPatch(raw json.RawMessage) (*int, error) {
 	return &weight, nil
 }
 
-func rejectInvalidCredentialWeight(c *gin.Context, field string, weight *int) bool {
+func rejectInvalidCredentialWeight(c *web.Context, field string, weight *int) bool {
 	if errValidate := config.ValidateCredentialWeight(weight); errValidate != nil {
-		c.JSON(400, gin.H{"error": fmt.Sprintf("%s: %v", field, errValidate)})
+		c.JSON(400, web.H{"error": fmt.Sprintf("%s: %v", field, errValidate)})
 		return true
 	}
 	return false
@@ -39,19 +39,19 @@ func rejectInvalidCredentialWeight(c *gin.Context, field string, weight *int) bo
 // rejectInvalidFingerprintProfile fails a write that carries a value the request
 // path would silently ignore, so a typo surfaces here instead of as a warning
 // behind every later request.
-func rejectInvalidFingerprintProfile(c *gin.Context, field, profile string) bool {
+func rejectInvalidFingerprintProfile(c *web.Context, field, profile string) bool {
 	if errValidate := config.ValidateClaudeFingerprintProfile(profile); errValidate != nil {
-		c.JSON(400, gin.H{"error": fmt.Sprintf("%s: %v", field, errValidate)})
+		c.JSON(400, web.H{"error": fmt.Sprintf("%s: %v", field, errValidate)})
 		return true
 	}
 	return false
 }
 
 // Generic helpers for list[string]
-func (h *Handler) putStringList(c *gin.Context, set func([]string), after func()) {
+func (h *Handler) putStringList(c *web.Context, set func([]string), after func()) {
 	data, err := c.GetRawData()
 	if err != nil {
-		c.JSON(400, gin.H{"error": "failed to read body"})
+		c.JSON(400, web.H{"error": "failed to read body"})
 		return
 	}
 	var arr []string
@@ -60,7 +60,7 @@ func (h *Handler) putStringList(c *gin.Context, set func([]string), after func()
 			Items []string `json:"items"`
 		}
 		if err2 := json.Unmarshal(data, &obj); err2 != nil || len(obj.Items) == 0 {
-			c.JSON(400, gin.H{"error": "invalid body"})
+			c.JSON(400, web.H{"error": "invalid body"})
 			return
 		}
 		arr = obj.Items
@@ -72,7 +72,7 @@ func (h *Handler) putStringList(c *gin.Context, set func([]string), after func()
 	h.persist(c)
 }
 
-func (h *Handler) patchStringList(c *gin.Context, target *[]string, after func()) {
+func (h *Handler) patchStringList(c *web.Context, target *[]string, after func()) {
 	var body struct {
 		Old   *string `json:"old"`
 		New   *string `json:"new"`
@@ -80,7 +80,7 @@ func (h *Handler) patchStringList(c *gin.Context, target *[]string, after func()
 		Value *string `json:"value"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(400, gin.H{"error": "invalid body"})
+		c.JSON(400, web.H{"error": "invalid body"})
 		return
 	}
 	if body.Index != nil && body.Value != nil && *body.Index >= 0 && *body.Index < len(*target) {
@@ -109,10 +109,10 @@ func (h *Handler) patchStringList(c *gin.Context, target *[]string, after func()
 		h.persist(c)
 		return
 	}
-	c.JSON(400, gin.H{"error": "missing fields"})
+	c.JSON(400, web.H{"error": "missing fields"})
 }
 
-func (h *Handler) deleteFromStringList(c *gin.Context, target *[]string, after func()) {
+func (h *Handler) deleteFromStringList(c *web.Context, target *[]string, after func()) {
 	if idxStr := c.Query("index"); idxStr != "" {
 		var idx int
 		_, err := fmt.Sscanf(idxStr, "%d", &idx)
@@ -139,31 +139,31 @@ func (h *Handler) deleteFromStringList(c *gin.Context, target *[]string, after f
 		h.persist(c)
 		return
 	}
-	c.JSON(400, gin.H{"error": "missing index or value"})
+	c.JSON(400, web.H{"error": "missing index or value"})
 }
 
 // api-keys
-func (h *Handler) GetAPIKeys(c *gin.Context) { c.JSON(200, gin.H{"api-keys": h.cfg.APIKeys}) }
-func (h *Handler) PutAPIKeys(c *gin.Context) {
+func (h *Handler) GetAPIKeys(c *web.Context) { c.JSON(200, web.H{"api-keys": h.cfg.APIKeys}) }
+func (h *Handler) PutAPIKeys(c *web.Context) {
 	h.putStringList(c, func(v []string) {
 		h.cfg.APIKeys = append([]string(nil), v...)
 	}, nil)
 }
-func (h *Handler) PatchAPIKeys(c *gin.Context) {
+func (h *Handler) PatchAPIKeys(c *web.Context) {
 	h.patchStringList(c, &h.cfg.APIKeys, func() {})
 }
-func (h *Handler) DeleteAPIKeys(c *gin.Context) {
+func (h *Handler) DeleteAPIKeys(c *web.Context) {
 	h.deleteFromStringList(c, &h.cfg.APIKeys, func() {})
 }
 
 // gemini-api-key: []GeminiKey
-func (h *Handler) GetGeminiKeys(c *gin.Context) {
-	c.JSON(200, gin.H{"gemini-api-key": h.geminiKeysWithAuthIndex()})
+func (h *Handler) GetGeminiKeys(c *web.Context) {
+	c.JSON(200, web.H{"gemini-api-key": h.geminiKeysWithAuthIndex()})
 }
-func (h *Handler) PutGeminiKeys(c *gin.Context) {
+func (h *Handler) PutGeminiKeys(c *web.Context) {
 	data, err := c.GetRawData()
 	if err != nil {
-		c.JSON(400, gin.H{"error": "failed to read body"})
+		c.JSON(400, web.H{"error": "failed to read body"})
 		return
 	}
 	var arr []config.GeminiKey
@@ -172,7 +172,7 @@ func (h *Handler) PutGeminiKeys(c *gin.Context) {
 			Items []config.GeminiKey `json:"items"`
 		}
 		if err2 := json.Unmarshal(data, &obj); err2 != nil || len(obj.Items) == 0 {
-			c.JSON(400, gin.H{"error": "invalid body"})
+			c.JSON(400, web.H{"error": "invalid body"})
 			return
 		}
 		arr = obj.Items
@@ -188,7 +188,7 @@ func (h *Handler) PutGeminiKeys(c *gin.Context) {
 	h.cfg.SanitizeGeminiKeys()
 	h.persistLocked(c)
 }
-func (h *Handler) PatchGeminiKey(c *gin.Context) {
+func (h *Handler) PatchGeminiKey(c *web.Context) {
 	type geminiKeyPatch struct {
 		APIKey              *string                          `json:"api-key"`
 		Weight              json.RawMessage                  `json:"weight"`
@@ -207,7 +207,7 @@ func (h *Handler) PatchGeminiKey(c *gin.Context) {
 		Value *geminiKeyPatch `json:"value"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil || body.Value == nil {
-		c.JSON(400, gin.H{"error": "invalid body"})
+		c.JSON(400, web.H{"error": "invalid body"})
 		return
 	}
 
@@ -233,7 +233,7 @@ func (h *Handler) PatchGeminiKey(c *gin.Context) {
 				matches = append(matches, i)
 			}
 			if len(matches) > 1 {
-				c.JSON(400, gin.H{"error": "multiple items match; index is required"})
+				c.JSON(400, web.H{"error": "multiple items match; index is required"})
 				return
 			}
 			if len(matches) == 1 {
@@ -242,7 +242,7 @@ func (h *Handler) PatchGeminiKey(c *gin.Context) {
 		}
 	}
 	if targetIndex == -1 {
-		c.JSON(404, gin.H{"error": "item not found"})
+		c.JSON(404, web.H{"error": "item not found"})
 		return
 	}
 
@@ -253,7 +253,7 @@ func (h *Handler) PatchGeminiKey(c *gin.Context) {
 	if len(body.Value.Weight) > 0 {
 		weight, errWeight := parseCredentialWeightPatch(body.Value.Weight)
 		if errWeight != nil {
-			c.JSON(400, gin.H{"error": errWeight.Error()})
+			c.JSON(400, web.H{"error": errWeight.Error()})
 			return
 		}
 		entry.Weight = weight
@@ -293,7 +293,7 @@ func (h *Handler) PatchGeminiKey(c *gin.Context) {
 	h.persistLocked(c)
 }
 
-func (h *Handler) DeleteGeminiKey(c *gin.Context) {
+func (h *Handler) DeleteGeminiKey(c *web.Context) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if val := strings.TrimSpace(c.Query("api-key")); val != "" {
@@ -308,11 +308,11 @@ func (h *Handler) DeleteGeminiKey(c *gin.Context) {
 				}
 			}
 			if matchCount == 0 {
-				c.JSON(404, gin.H{"error": "item not found"})
+				c.JSON(404, web.H{"error": "item not found"})
 				return
 			}
 			if matchCount > 1 {
-				c.JSON(400, gin.H{"error": "multiple items match; index is required"})
+				c.JSON(400, web.H{"error": "multiple items match; index is required"})
 				return
 			}
 			h.cfg.GeminiKey = append(h.cfg.GeminiKey[:matchIndex], h.cfg.GeminiKey[matchIndex+1:]...)
@@ -332,11 +332,11 @@ func (h *Handler) DeleteGeminiKey(c *gin.Context) {
 			}
 		}
 		if matchCount == 0 {
-			c.JSON(404, gin.H{"error": "item not found"})
+			c.JSON(404, web.H{"error": "item not found"})
 			return
 		}
 		if matchCount > 1 {
-			c.JSON(400, gin.H{"error": "multiple items match api-key; base-url is required"})
+			c.JSON(400, web.H{"error": "multiple items match api-key; base-url is required"})
 			return
 		}
 		h.cfg.GeminiKey = append(h.cfg.GeminiKey[:matchIndex], h.cfg.GeminiKey[matchIndex+1:]...)
@@ -353,17 +353,17 @@ func (h *Handler) DeleteGeminiKey(c *gin.Context) {
 			return
 		}
 	}
-	c.JSON(400, gin.H{"error": "missing api-key or index"})
+	c.JSON(400, web.H{"error": "missing api-key or index"})
 }
 
 // interactions-api-key: []GeminiKey
-func (h *Handler) GetInteractionsKeys(c *gin.Context) {
-	c.JSON(200, gin.H{"interactions-api-key": h.interactionsKeysWithAuthIndex()})
+func (h *Handler) GetInteractionsKeys(c *web.Context) {
+	c.JSON(200, web.H{"interactions-api-key": h.interactionsKeysWithAuthIndex()})
 }
-func (h *Handler) PutInteractionsKeys(c *gin.Context) {
+func (h *Handler) PutInteractionsKeys(c *web.Context) {
 	data, errRead := c.GetRawData()
 	if errRead != nil {
-		c.JSON(400, gin.H{"error": "failed to read body"})
+		c.JSON(400, web.H{"error": "failed to read body"})
 		return
 	}
 	var arr []config.GeminiKey
@@ -374,7 +374,7 @@ func (h *Handler) PutInteractionsKeys(c *gin.Context) {
 		}
 		errObjUnmarshal := json.Unmarshal(data, &obj)
 		if errObjUnmarshal != nil || len(obj.Items) == 0 {
-			c.JSON(400, gin.H{"error": "invalid body"})
+			c.JSON(400, web.H{"error": "invalid body"})
 			return
 		}
 		arr = obj.Items
@@ -390,7 +390,7 @@ func (h *Handler) PutInteractionsKeys(c *gin.Context) {
 	h.cfg.SanitizeInteractionsKeys()
 	h.persistLocked(c)
 }
-func (h *Handler) PatchInteractionsKey(c *gin.Context) {
+func (h *Handler) PatchInteractionsKey(c *web.Context) {
 	type geminiKeyPatch struct {
 		APIKey              *string                          `json:"api-key"`
 		Weight              json.RawMessage                  `json:"weight"`
@@ -410,7 +410,7 @@ func (h *Handler) PatchInteractionsKey(c *gin.Context) {
 	}
 	errBind := c.ShouldBindJSON(&body)
 	if errBind != nil || body.Value == nil {
-		c.JSON(400, gin.H{"error": "invalid body"})
+		c.JSON(400, web.H{"error": "invalid body"})
 		return
 	}
 
@@ -436,7 +436,7 @@ func (h *Handler) PatchInteractionsKey(c *gin.Context) {
 				matches = append(matches, i)
 			}
 			if len(matches) > 1 {
-				c.JSON(400, gin.H{"error": "multiple items match; index is required"})
+				c.JSON(400, web.H{"error": "multiple items match; index is required"})
 				return
 			}
 			if len(matches) == 1 {
@@ -445,7 +445,7 @@ func (h *Handler) PatchInteractionsKey(c *gin.Context) {
 		}
 	}
 	if targetIndex == -1 {
-		c.JSON(404, gin.H{"error": "item not found"})
+		c.JSON(404, web.H{"error": "item not found"})
 		return
 	}
 
@@ -456,7 +456,7 @@ func (h *Handler) PatchInteractionsKey(c *gin.Context) {
 	if len(body.Value.Weight) > 0 {
 		weight, errWeight := parseCredentialWeightPatch(body.Value.Weight)
 		if errWeight != nil {
-			c.JSON(400, gin.H{"error": errWeight.Error()})
+			c.JSON(400, web.H{"error": errWeight.Error()})
 			return
 		}
 		entry.Weight = weight
@@ -496,7 +496,7 @@ func (h *Handler) PatchInteractionsKey(c *gin.Context) {
 	h.persistLocked(c)
 }
 
-func (h *Handler) DeleteInteractionsKey(c *gin.Context) {
+func (h *Handler) DeleteInteractionsKey(c *web.Context) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if val := strings.TrimSpace(c.Query("api-key")); val != "" {
@@ -511,11 +511,11 @@ func (h *Handler) DeleteInteractionsKey(c *gin.Context) {
 				}
 			}
 			if matchCount == 0 {
-				c.JSON(404, gin.H{"error": "item not found"})
+				c.JSON(404, web.H{"error": "item not found"})
 				return
 			}
 			if matchCount > 1 {
-				c.JSON(400, gin.H{"error": "multiple items match; index is required"})
+				c.JSON(400, web.H{"error": "multiple items match; index is required"})
 				return
 			}
 			h.cfg.InteractionsKey = append(h.cfg.InteractionsKey[:matchIndex], h.cfg.InteractionsKey[matchIndex+1:]...)
@@ -535,11 +535,11 @@ func (h *Handler) DeleteInteractionsKey(c *gin.Context) {
 			}
 		}
 		if matchCount == 0 {
-			c.JSON(404, gin.H{"error": "item not found"})
+			c.JSON(404, web.H{"error": "item not found"})
 			return
 		}
 		if matchCount > 1 {
-			c.JSON(400, gin.H{"error": "multiple items match api-key; base-url is required"})
+			c.JSON(400, web.H{"error": "multiple items match api-key; base-url is required"})
 			return
 		}
 		h.cfg.InteractionsKey = append(h.cfg.InteractionsKey[:matchIndex], h.cfg.InteractionsKey[matchIndex+1:]...)
@@ -557,7 +557,7 @@ func (h *Handler) DeleteInteractionsKey(c *gin.Context) {
 			return
 		}
 	}
-	c.JSON(400, gin.H{"error": "missing api-key or index"})
+	c.JSON(400, web.H{"error": "missing api-key or index"})
 }
 
 func (h *Handler) findExistingClaudeKey(existing []config.ClaudeKey, item config.ClaudeKey) *config.ClaudeKey {
@@ -584,13 +584,13 @@ func (h *Handler) findExistingClaudeKey(existing []config.ClaudeKey, item config
 }
 
 // claude-api-key: []ClaudeKey
-func (h *Handler) GetClaudeKeys(c *gin.Context) {
-	c.JSON(200, gin.H{"claude-api-key": h.claudeKeysWithAuthIndex()})
+func (h *Handler) GetClaudeKeys(c *web.Context) {
+	c.JSON(200, web.H{"claude-api-key": h.claudeKeysWithAuthIndex()})
 }
-func (h *Handler) PutClaudeKeys(c *gin.Context) {
+func (h *Handler) PutClaudeKeys(c *web.Context) {
 	data, err := c.GetRawData()
 	if err != nil {
-		c.JSON(400, gin.H{"error": "failed to read body"})
+		c.JSON(400, web.H{"error": "failed to read body"})
 		return
 	}
 	var arr []config.ClaudeKey
@@ -599,7 +599,7 @@ func (h *Handler) PutClaudeKeys(c *gin.Context) {
 			Items []config.ClaudeKey `json:"items"`
 		}
 		if err2 := json.Unmarshal(data, &obj); err2 != nil || len(obj.Items) == 0 {
-			c.JSON(400, gin.H{"error": "invalid body"})
+			c.JSON(400, web.H{"error": "invalid body"})
 			return
 		}
 		arr = obj.Items
@@ -628,7 +628,7 @@ func (h *Handler) PutClaudeKeys(c *gin.Context) {
 	h.cfg.SanitizeClaudeKeys()
 	h.persistLocked(c)
 }
-func (h *Handler) PatchClaudeKey(c *gin.Context) {
+func (h *Handler) PatchClaudeKey(c *web.Context) {
 	type claudeKeyPatch struct {
 		APIKey                  *string                          `json:"api-key"`
 		Priority                *int                             `json:"priority"`
@@ -652,7 +652,7 @@ func (h *Handler) PatchClaudeKey(c *gin.Context) {
 		Value *claudeKeyPatch `json:"value"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil || body.Value == nil {
-		c.JSON(400, gin.H{"error": "invalid body"})
+		c.JSON(400, web.H{"error": "invalid body"})
 		return
 	}
 
@@ -672,7 +672,7 @@ func (h *Handler) PatchClaudeKey(c *gin.Context) {
 		}
 	}
 	if targetIndex == -1 {
-		c.JSON(404, gin.H{"error": "item not found"})
+		c.JSON(404, web.H{"error": "item not found"})
 		return
 	}
 
@@ -697,7 +697,7 @@ func (h *Handler) PatchClaudeKey(c *gin.Context) {
 	if len(body.Value.Weight) > 0 {
 		weight, errWeight := parseCredentialWeightPatch(body.Value.Weight)
 		if errWeight != nil {
-			c.JSON(400, gin.H{"error": errWeight.Error()})
+			c.JSON(400, web.H{"error": errWeight.Error()})
 			return
 		}
 		entry.Weight = weight
@@ -789,7 +789,7 @@ func (h *Handler) PatchClaudeKey(c *gin.Context) {
 	h.persistLocked(c)
 }
 
-func (h *Handler) DeleteClaudeKey(c *gin.Context) {
+func (h *Handler) DeleteClaudeKey(c *web.Context) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if val := strings.TrimSpace(c.Query("api-key")); val != "" {
@@ -819,7 +819,7 @@ func (h *Handler) DeleteClaudeKey(c *gin.Context) {
 			}
 		}
 		if matchCount > 1 {
-			c.JSON(400, gin.H{"error": "multiple items match api-key; base-url is required"})
+			c.JSON(400, web.H{"error": "multiple items match api-key; base-url is required"})
 			return
 		}
 		if matchIndex != -1 {
@@ -839,17 +839,17 @@ func (h *Handler) DeleteClaudeKey(c *gin.Context) {
 			return
 		}
 	}
-	c.JSON(400, gin.H{"error": "missing api-key or index"})
+	c.JSON(400, web.H{"error": "missing api-key or index"})
 }
 
 // openai-compatibility: []OpenAICompatibility
-func (h *Handler) GetOpenAICompat(c *gin.Context) {
-	c.JSON(200, gin.H{"openai-compatibility": h.openAICompatibilityWithAuthIndex()})
+func (h *Handler) GetOpenAICompat(c *web.Context) {
+	c.JSON(200, web.H{"openai-compatibility": h.openAICompatibilityWithAuthIndex()})
 }
-func (h *Handler) PutOpenAICompat(c *gin.Context) {
+func (h *Handler) PutOpenAICompat(c *web.Context) {
 	data, err := c.GetRawData()
 	if err != nil {
-		c.JSON(400, gin.H{"error": "failed to read body"})
+		c.JSON(400, web.H{"error": "failed to read body"})
 		return
 	}
 	var arr []config.OpenAICompatibility
@@ -858,7 +858,7 @@ func (h *Handler) PutOpenAICompat(c *gin.Context) {
 			Items []config.OpenAICompatibility `json:"items"`
 		}
 		if err2 := json.Unmarshal(data, &obj); err2 != nil || len(obj.Items) == 0 {
-			c.JSON(400, gin.H{"error": "invalid body"})
+			c.JSON(400, web.H{"error": "invalid body"})
 			return
 		}
 		arr = obj.Items
@@ -883,7 +883,7 @@ func (h *Handler) PutOpenAICompat(c *gin.Context) {
 	h.cfg.SanitizeOpenAICompatibility()
 	h.persistLocked(c)
 }
-func (h *Handler) PatchOpenAICompat(c *gin.Context) {
+func (h *Handler) PatchOpenAICompat(c *web.Context) {
 	type openAICompatPatch struct {
 		Name                  *string                             `json:"name"`
 		Prefix                *string                             `json:"prefix"`
@@ -903,7 +903,7 @@ func (h *Handler) PatchOpenAICompat(c *gin.Context) {
 		Value *openAICompatPatch `json:"value"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil || body.Value == nil {
-		c.JSON(400, gin.H{"error": "invalid body"})
+		c.JSON(400, web.H{"error": "invalid body"})
 		return
 	}
 
@@ -923,7 +923,7 @@ func (h *Handler) PatchOpenAICompat(c *gin.Context) {
 		}
 	}
 	if targetIndex == -1 {
-		c.JSON(404, gin.H{"error": "item not found"})
+		c.JSON(404, web.H{"error": "item not found"})
 		return
 	}
 
@@ -980,7 +980,7 @@ func (h *Handler) PatchOpenAICompat(c *gin.Context) {
 	h.persistLocked(c)
 }
 
-func (h *Handler) DeleteOpenAICompat(c *gin.Context) {
+func (h *Handler) DeleteOpenAICompat(c *web.Context) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if name := c.Query("name"); name != "" {
@@ -1005,17 +1005,17 @@ func (h *Handler) DeleteOpenAICompat(c *gin.Context) {
 			return
 		}
 	}
-	c.JSON(400, gin.H{"error": "missing name or index"})
+	c.JSON(400, web.H{"error": "missing name or index"})
 }
 
 // vertex-api-key: []VertexCompatKey
-func (h *Handler) GetVertexCompatKeys(c *gin.Context) {
-	c.JSON(200, gin.H{"vertex-api-key": h.vertexCompatKeysWithAuthIndex()})
+func (h *Handler) GetVertexCompatKeys(c *web.Context) {
+	c.JSON(200, web.H{"vertex-api-key": h.vertexCompatKeysWithAuthIndex()})
 }
-func (h *Handler) PutVertexCompatKeys(c *gin.Context) {
+func (h *Handler) PutVertexCompatKeys(c *web.Context) {
 	data, err := c.GetRawData()
 	if err != nil {
-		c.JSON(400, gin.H{"error": "failed to read body"})
+		c.JSON(400, web.H{"error": "failed to read body"})
 		return
 	}
 	var arr []config.VertexCompatKey
@@ -1024,7 +1024,7 @@ func (h *Handler) PutVertexCompatKeys(c *gin.Context) {
 			Items []config.VertexCompatKey `json:"items"`
 		}
 		if err2 := json.Unmarshal(data, &obj); err2 != nil || len(obj.Items) == 0 {
-			c.JSON(400, gin.H{"error": "invalid body"})
+			c.JSON(400, web.H{"error": "invalid body"})
 			return
 		}
 		arr = obj.Items
@@ -1032,7 +1032,7 @@ func (h *Handler) PutVertexCompatKeys(c *gin.Context) {
 	for i := range arr {
 		normalizeVertexCompatKey(&arr[i])
 		if arr[i].APIKey == "" {
-			c.JSON(400, gin.H{"error": fmt.Sprintf("vertex-api-key[%d].api-key is required", i)})
+			c.JSON(400, web.H{"error": fmt.Sprintf("vertex-api-key[%d].api-key is required", i)})
 			return
 		}
 		if rejectInvalidCredentialWeight(c, fmt.Sprintf("vertex-api-key[%d].weight", i), arr[i].Weight) {
@@ -1045,7 +1045,7 @@ func (h *Handler) PutVertexCompatKeys(c *gin.Context) {
 	h.cfg.SanitizeVertexCompatKeys()
 	h.persistLocked(c)
 }
-func (h *Handler) PatchVertexCompatKey(c *gin.Context) {
+func (h *Handler) PatchVertexCompatKey(c *web.Context) {
 	type vertexCompatPatch struct {
 		APIKey         *string                     `json:"api-key"`
 		Weight         json.RawMessage             `json:"weight"`
@@ -1064,7 +1064,7 @@ func (h *Handler) PatchVertexCompatKey(c *gin.Context) {
 		Value *vertexCompatPatch `json:"value"`
 	}
 	if errBindJSON := c.ShouldBindJSON(&body); errBindJSON != nil || body.Value == nil {
-		c.JSON(400, gin.H{"error": "invalid body"})
+		c.JSON(400, web.H{"error": "invalid body"})
 		return
 	}
 
@@ -1086,7 +1086,7 @@ func (h *Handler) PatchVertexCompatKey(c *gin.Context) {
 		}
 	}
 	if targetIndex == -1 {
-		c.JSON(404, gin.H{"error": "item not found"})
+		c.JSON(404, web.H{"error": "item not found"})
 		return
 	}
 
@@ -1104,7 +1104,7 @@ func (h *Handler) PatchVertexCompatKey(c *gin.Context) {
 	if len(body.Value.Weight) > 0 {
 		weight, errWeight := parseCredentialWeightPatch(body.Value.Weight)
 		if errWeight != nil {
-			c.JSON(400, gin.H{"error": errWeight.Error()})
+			c.JSON(400, web.H{"error": errWeight.Error()})
 			return
 		}
 		entry.Weight = weight
@@ -1139,7 +1139,7 @@ func (h *Handler) PatchVertexCompatKey(c *gin.Context) {
 	h.persistLocked(c)
 }
 
-func (h *Handler) DeleteVertexCompatKey(c *gin.Context) {
+func (h *Handler) DeleteVertexCompatKey(c *web.Context) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if val := strings.TrimSpace(c.Query("api-key")); val != "" {
@@ -1169,7 +1169,7 @@ func (h *Handler) DeleteVertexCompatKey(c *gin.Context) {
 			}
 		}
 		if matchCount > 1 {
-			c.JSON(400, gin.H{"error": "multiple items match api-key; base-url is required"})
+			c.JSON(400, web.H{"error": "multiple items match api-key; base-url is required"})
 			return
 		}
 		if matchIndex != -1 {
@@ -1189,18 +1189,18 @@ func (h *Handler) DeleteVertexCompatKey(c *gin.Context) {
 			return
 		}
 	}
-	c.JSON(400, gin.H{"error": "missing api-key or index"})
+	c.JSON(400, web.H{"error": "missing api-key or index"})
 }
 
 // oauth-excluded-models: map[string][]string
-func (h *Handler) GetOAuthExcludedModels(c *gin.Context) {
-	c.JSON(200, gin.H{"oauth-excluded-models": config.NormalizeOAuthExcludedModels(h.cfg.OAuthExcludedModels)})
+func (h *Handler) GetOAuthExcludedModels(c *web.Context) {
+	c.JSON(200, web.H{"oauth-excluded-models": config.NormalizeOAuthExcludedModels(h.cfg.OAuthExcludedModels)})
 }
 
-func (h *Handler) PutOAuthExcludedModels(c *gin.Context) {
+func (h *Handler) PutOAuthExcludedModels(c *web.Context) {
 	data, err := c.GetRawData()
 	if err != nil {
-		c.JSON(400, gin.H{"error": "failed to read body"})
+		c.JSON(400, web.H{"error": "failed to read body"})
 		return
 	}
 	var entries map[string][]string
@@ -1209,7 +1209,7 @@ func (h *Handler) PutOAuthExcludedModels(c *gin.Context) {
 			Items map[string][]string `json:"items"`
 		}
 		if err2 := json.Unmarshal(data, &wrapper); err2 != nil {
-			c.JSON(400, gin.H{"error": "invalid body"})
+			c.JSON(400, web.H{"error": "invalid body"})
 			return
 		}
 		entries = wrapper.Items
@@ -1218,28 +1218,28 @@ func (h *Handler) PutOAuthExcludedModels(c *gin.Context) {
 	h.persist(c)
 }
 
-func (h *Handler) PatchOAuthExcludedModels(c *gin.Context) {
+func (h *Handler) PatchOAuthExcludedModels(c *web.Context) {
 	var body struct {
 		Provider *string  `json:"provider"`
 		Models   []string `json:"models"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil || body.Provider == nil {
-		c.JSON(400, gin.H{"error": "invalid body"})
+		c.JSON(400, web.H{"error": "invalid body"})
 		return
 	}
 	provider := strings.ToLower(strings.TrimSpace(*body.Provider))
 	if provider == "" {
-		c.JSON(400, gin.H{"error": "invalid provider"})
+		c.JSON(400, web.H{"error": "invalid provider"})
 		return
 	}
 	normalized := config.NormalizeExcludedModels(body.Models)
 	if len(normalized) == 0 {
 		if h.cfg.OAuthExcludedModels == nil {
-			c.JSON(404, gin.H{"error": "provider not found"})
+			c.JSON(404, web.H{"error": "provider not found"})
 			return
 		}
 		if _, ok := h.cfg.OAuthExcludedModels[provider]; !ok {
-			c.JSON(404, gin.H{"error": "provider not found"})
+			c.JSON(404, web.H{"error": "provider not found"})
 			return
 		}
 		delete(h.cfg.OAuthExcludedModels, provider)
@@ -1256,18 +1256,18 @@ func (h *Handler) PatchOAuthExcludedModels(c *gin.Context) {
 	h.persist(c)
 }
 
-func (h *Handler) DeleteOAuthExcludedModels(c *gin.Context) {
+func (h *Handler) DeleteOAuthExcludedModels(c *web.Context) {
 	provider := strings.ToLower(strings.TrimSpace(c.Query("provider")))
 	if provider == "" {
-		c.JSON(400, gin.H{"error": "missing provider"})
+		c.JSON(400, web.H{"error": "missing provider"})
 		return
 	}
 	if h.cfg.OAuthExcludedModels == nil {
-		c.JSON(404, gin.H{"error": "provider not found"})
+		c.JSON(404, web.H{"error": "provider not found"})
 		return
 	}
 	if _, ok := h.cfg.OAuthExcludedModels[provider]; !ok {
-		c.JSON(404, gin.H{"error": "provider not found"})
+		c.JSON(404, web.H{"error": "provider not found"})
 		return
 	}
 	delete(h.cfg.OAuthExcludedModels, provider)
@@ -1278,14 +1278,14 @@ func (h *Handler) DeleteOAuthExcludedModels(c *gin.Context) {
 }
 
 // oauth-model-alias: map[string][]OAuthModelAlias
-func (h *Handler) GetOAuthModelAlias(c *gin.Context) {
-	c.JSON(200, gin.H{"oauth-model-alias": sanitizedOAuthModelAlias(h.cfg.OAuthModelAlias)})
+func (h *Handler) GetOAuthModelAlias(c *web.Context) {
+	c.JSON(200, web.H{"oauth-model-alias": sanitizedOAuthModelAlias(h.cfg.OAuthModelAlias)})
 }
 
-func (h *Handler) PutOAuthModelAlias(c *gin.Context) {
+func (h *Handler) PutOAuthModelAlias(c *web.Context) {
 	data, err := c.GetRawData()
 	if err != nil {
-		c.JSON(400, gin.H{"error": "failed to read body"})
+		c.JSON(400, web.H{"error": "failed to read body"})
 		return
 	}
 	var entries map[string][]config.OAuthModelAlias
@@ -1294,7 +1294,7 @@ func (h *Handler) PutOAuthModelAlias(c *gin.Context) {
 			Items map[string][]config.OAuthModelAlias `json:"items"`
 		}
 		if err2 := json.Unmarshal(data, &wrapper); err2 != nil {
-			c.JSON(400, gin.H{"error": "invalid body"})
+			c.JSON(400, web.H{"error": "invalid body"})
 			return
 		}
 		entries = wrapper.Items
@@ -1303,14 +1303,14 @@ func (h *Handler) PutOAuthModelAlias(c *gin.Context) {
 	h.persist(c)
 }
 
-func (h *Handler) PatchOAuthModelAlias(c *gin.Context) {
+func (h *Handler) PatchOAuthModelAlias(c *web.Context) {
 	var body struct {
 		Provider *string                  `json:"provider"`
 		Channel  *string                  `json:"channel"`
 		Aliases  []config.OAuthModelAlias `json:"aliases"`
 	}
 	if errBindJSON := c.ShouldBindJSON(&body); errBindJSON != nil {
-		c.JSON(400, gin.H{"error": "invalid body"})
+		c.JSON(400, web.H{"error": "invalid body"})
 		return
 	}
 	channelRaw := ""
@@ -1321,7 +1321,7 @@ func (h *Handler) PatchOAuthModelAlias(c *gin.Context) {
 	}
 	channel := strings.ToLower(strings.TrimSpace(channelRaw))
 	if channel == "" {
-		c.JSON(400, gin.H{"error": "invalid channel"})
+		c.JSON(400, web.H{"error": "invalid channel"})
 		return
 	}
 
@@ -1329,11 +1329,11 @@ func (h *Handler) PatchOAuthModelAlias(c *gin.Context) {
 	normalized := normalizedMap[channel]
 	if len(normalized) == 0 {
 		if h.cfg.OAuthModelAlias == nil {
-			c.JSON(404, gin.H{"error": "channel not found"})
+			c.JSON(404, web.H{"error": "channel not found"})
 			return
 		}
 		if _, ok := h.cfg.OAuthModelAlias[channel]; !ok {
-			c.JSON(404, gin.H{"error": "channel not found"})
+			c.JSON(404, web.H{"error": "channel not found"})
 			return
 		}
 		delete(h.cfg.OAuthModelAlias, channel)
@@ -1350,21 +1350,21 @@ func (h *Handler) PatchOAuthModelAlias(c *gin.Context) {
 	h.persist(c)
 }
 
-func (h *Handler) DeleteOAuthModelAlias(c *gin.Context) {
+func (h *Handler) DeleteOAuthModelAlias(c *web.Context) {
 	channel := strings.ToLower(strings.TrimSpace(c.Query("channel")))
 	if channel == "" {
 		channel = strings.ToLower(strings.TrimSpace(c.Query("provider")))
 	}
 	if channel == "" {
-		c.JSON(400, gin.H{"error": "missing channel"})
+		c.JSON(400, web.H{"error": "missing channel"})
 		return
 	}
 	if h.cfg.OAuthModelAlias == nil {
-		c.JSON(404, gin.H{"error": "channel not found"})
+		c.JSON(404, web.H{"error": "channel not found"})
 		return
 	}
 	if _, ok := h.cfg.OAuthModelAlias[channel]; !ok {
-		c.JSON(404, gin.H{"error": "channel not found"})
+		c.JSON(404, web.H{"error": "channel not found"})
 		return
 	}
 	delete(h.cfg.OAuthModelAlias, channel)
@@ -1375,14 +1375,14 @@ func (h *Handler) DeleteOAuthModelAlias(c *gin.Context) {
 }
 
 // oauth-request-scoped-errors: map[string][]RequestScopedErrorRule
-func (h *Handler) GetOAuthRequestScopedErrors(c *gin.Context) {
-	c.JSON(200, gin.H{"oauth-request-scoped-errors": sanitizedOAuthRequestScopedErrors(h.cfg.OAuthRequestScopedErrors)})
+func (h *Handler) GetOAuthRequestScopedErrors(c *web.Context) {
+	c.JSON(200, web.H{"oauth-request-scoped-errors": sanitizedOAuthRequestScopedErrors(h.cfg.OAuthRequestScopedErrors)})
 }
 
-func (h *Handler) PutOAuthRequestScopedErrors(c *gin.Context) {
+func (h *Handler) PutOAuthRequestScopedErrors(c *web.Context) {
 	data, err := c.GetRawData()
 	if err != nil {
-		c.JSON(400, gin.H{"error": "failed to read body"})
+		c.JSON(400, web.H{"error": "failed to read body"})
 		return
 	}
 	var entries map[string][]config.RequestScopedErrorRule
@@ -1391,7 +1391,7 @@ func (h *Handler) PutOAuthRequestScopedErrors(c *gin.Context) {
 			Items map[string][]config.RequestScopedErrorRule `json:"items"`
 		}
 		if err2 := json.Unmarshal(data, &wrapper); err2 != nil {
-			c.JSON(400, gin.H{"error": "invalid body"})
+			c.JSON(400, web.H{"error": "invalid body"})
 			return
 		}
 		entries = wrapper.Items
@@ -1400,14 +1400,14 @@ func (h *Handler) PutOAuthRequestScopedErrors(c *gin.Context) {
 	h.persist(c)
 }
 
-func (h *Handler) PatchOAuthRequestScopedErrors(c *gin.Context) {
+func (h *Handler) PatchOAuthRequestScopedErrors(c *web.Context) {
 	var body struct {
 		Provider *string                         `json:"provider"`
 		Channel  *string                         `json:"channel"`
 		Rules    []config.RequestScopedErrorRule `json:"rules"`
 	}
 	if errBindJSON := c.ShouldBindJSON(&body); errBindJSON != nil {
-		c.JSON(400, gin.H{"error": "invalid body"})
+		c.JSON(400, web.H{"error": "invalid body"})
 		return
 	}
 	channelRaw := ""
@@ -1418,7 +1418,7 @@ func (h *Handler) PatchOAuthRequestScopedErrors(c *gin.Context) {
 	}
 	channel := strings.ToLower(strings.TrimSpace(channelRaw))
 	if channel == "" {
-		c.JSON(400, gin.H{"error": "invalid channel"})
+		c.JSON(400, web.H{"error": "invalid channel"})
 		return
 	}
 
@@ -1426,11 +1426,11 @@ func (h *Handler) PatchOAuthRequestScopedErrors(c *gin.Context) {
 	normalized := normalizedMap[channel]
 	if len(normalized) == 0 {
 		if h.cfg.OAuthRequestScopedErrors == nil {
-			c.JSON(404, gin.H{"error": "channel not found"})
+			c.JSON(404, web.H{"error": "channel not found"})
 			return
 		}
 		if _, ok := h.cfg.OAuthRequestScopedErrors[channel]; !ok {
-			c.JSON(404, gin.H{"error": "channel not found"})
+			c.JSON(404, web.H{"error": "channel not found"})
 			return
 		}
 		delete(h.cfg.OAuthRequestScopedErrors, channel)
@@ -1447,21 +1447,21 @@ func (h *Handler) PatchOAuthRequestScopedErrors(c *gin.Context) {
 	h.persist(c)
 }
 
-func (h *Handler) DeleteOAuthRequestScopedErrors(c *gin.Context) {
+func (h *Handler) DeleteOAuthRequestScopedErrors(c *web.Context) {
 	channel := strings.ToLower(strings.TrimSpace(c.Query("channel")))
 	if channel == "" {
 		channel = strings.ToLower(strings.TrimSpace(c.Query("provider")))
 	}
 	if channel == "" {
-		c.JSON(400, gin.H{"error": "missing channel"})
+		c.JSON(400, web.H{"error": "missing channel"})
 		return
 	}
 	if h.cfg.OAuthRequestScopedErrors == nil {
-		c.JSON(404, gin.H{"error": "channel not found"})
+		c.JSON(404, web.H{"error": "channel not found"})
 		return
 	}
 	if _, ok := h.cfg.OAuthRequestScopedErrors[channel]; !ok {
-		c.JSON(404, gin.H{"error": "channel not found"})
+		c.JSON(404, web.H{"error": "channel not found"})
 		return
 	}
 	delete(h.cfg.OAuthRequestScopedErrors, channel)
@@ -1472,13 +1472,13 @@ func (h *Handler) DeleteOAuthRequestScopedErrors(c *gin.Context) {
 }
 
 // codex-api-key: []CodexKey
-func (h *Handler) GetCodexKeys(c *gin.Context) {
-	c.JSON(200, gin.H{"codex-api-key": h.codexKeysWithAuthIndex()})
+func (h *Handler) GetCodexKeys(c *web.Context) {
+	c.JSON(200, web.H{"codex-api-key": h.codexKeysWithAuthIndex()})
 }
-func (h *Handler) PutCodexKeys(c *gin.Context) {
+func (h *Handler) PutCodexKeys(c *web.Context) {
 	data, err := c.GetRawData()
 	if err != nil {
-		c.JSON(400, gin.H{"error": "failed to read body"})
+		c.JSON(400, web.H{"error": "failed to read body"})
 		return
 	}
 	var arr []config.CodexKey
@@ -1487,7 +1487,7 @@ func (h *Handler) PutCodexKeys(c *gin.Context) {
 			Items []config.CodexKey `json:"items"`
 		}
 		if err2 := json.Unmarshal(data, &obj); err2 != nil || len(obj.Items) == 0 {
-			c.JSON(400, gin.H{"error": "invalid body"})
+			c.JSON(400, web.H{"error": "invalid body"})
 			return
 		}
 		arr = obj.Items
@@ -1511,7 +1511,7 @@ func (h *Handler) PutCodexKeys(c *gin.Context) {
 	h.cfg.SanitizeCodexKeys()
 	h.persistLocked(c)
 }
-func (h *Handler) PatchCodexKey(c *gin.Context) {
+func (h *Handler) PatchCodexKey(c *web.Context) {
 	type codexKeyPatch struct {
 		APIKey              *string                          `json:"api-key"`
 		Weight              json.RawMessage                  `json:"weight"`
@@ -1532,7 +1532,7 @@ func (h *Handler) PatchCodexKey(c *gin.Context) {
 		Value *codexKeyPatch `json:"value"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil || body.Value == nil {
-		c.JSON(400, gin.H{"error": "invalid body"})
+		c.JSON(400, web.H{"error": "invalid body"})
 		return
 	}
 
@@ -1552,7 +1552,7 @@ func (h *Handler) PatchCodexKey(c *gin.Context) {
 		}
 	}
 	if targetIndex == -1 {
-		c.JSON(404, gin.H{"error": "item not found"})
+		c.JSON(404, web.H{"error": "item not found"})
 		return
 	}
 
@@ -1563,7 +1563,7 @@ func (h *Handler) PatchCodexKey(c *gin.Context) {
 	if len(body.Value.Weight) > 0 {
 		weight, errWeight := parseCredentialWeightPatch(body.Value.Weight)
 		if errWeight != nil {
-			c.JSON(400, gin.H{"error": errWeight.Error()})
+			c.JSON(400, web.H{"error": errWeight.Error()})
 			return
 		}
 		entry.Weight = weight
@@ -1611,7 +1611,7 @@ func (h *Handler) PatchCodexKey(c *gin.Context) {
 	h.persistLocked(c)
 }
 
-func (h *Handler) DeleteCodexKey(c *gin.Context) {
+func (h *Handler) DeleteCodexKey(c *web.Context) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if val := strings.TrimSpace(c.Query("api-key")); val != "" {
@@ -1641,7 +1641,7 @@ func (h *Handler) DeleteCodexKey(c *gin.Context) {
 			}
 		}
 		if matchCount > 1 {
-			c.JSON(400, gin.H{"error": "multiple items match api-key; base-url is required"})
+			c.JSON(400, web.H{"error": "multiple items match api-key; base-url is required"})
 			return
 		}
 		if matchIndex != -1 {
@@ -1661,18 +1661,18 @@ func (h *Handler) DeleteCodexKey(c *gin.Context) {
 			return
 		}
 	}
-	c.JSON(400, gin.H{"error": "missing api-key or index"})
+	c.JSON(400, web.H{"error": "missing api-key or index"})
 }
 
 // xai-api-key: []XAIKey
-func (h *Handler) GetXAIKeys(c *gin.Context) {
-	c.JSON(200, gin.H{"xai-api-key": h.xaiKeysWithAuthIndex()})
+func (h *Handler) GetXAIKeys(c *web.Context) {
+	c.JSON(200, web.H{"xai-api-key": h.xaiKeysWithAuthIndex()})
 }
 
-func (h *Handler) PutXAIKeys(c *gin.Context) {
+func (h *Handler) PutXAIKeys(c *web.Context) {
 	data, errRead := c.GetRawData()
 	if errRead != nil {
-		c.JSON(400, gin.H{"error": "failed to read body"})
+		c.JSON(400, web.H{"error": "failed to read body"})
 		return
 	}
 	var arr []config.XAIKey
@@ -1681,7 +1681,7 @@ func (h *Handler) PutXAIKeys(c *gin.Context) {
 			Items []config.XAIKey `json:"items"`
 		}
 		if errObject := json.Unmarshal(data, &obj); errObject != nil || len(obj.Items) == 0 {
-			c.JSON(400, gin.H{"error": "invalid body"})
+			c.JSON(400, web.H{"error": "invalid body"})
 			return
 		}
 		arr = obj.Items
@@ -1705,7 +1705,7 @@ func (h *Handler) PutXAIKeys(c *gin.Context) {
 	h.persistLocked(c)
 }
 
-func (h *Handler) PatchXAIKey(c *gin.Context) {
+func (h *Handler) PatchXAIKey(c *web.Context) {
 	type xaiKeyPatch struct {
 		APIKey              *string                          `json:"api-key"`
 		Priority            *int                             `json:"priority"`
@@ -1727,7 +1727,7 @@ func (h *Handler) PatchXAIKey(c *gin.Context) {
 		Value *xaiKeyPatch `json:"value"`
 	}
 	if errBind := c.ShouldBindJSON(&body); errBind != nil || body.Value == nil {
-		c.JSON(400, gin.H{"error": "invalid body"})
+		c.JSON(400, web.H{"error": "invalid body"})
 		return
 	}
 
@@ -1747,7 +1747,7 @@ func (h *Handler) PatchXAIKey(c *gin.Context) {
 		}
 	}
 	if targetIndex == -1 {
-		c.JSON(404, gin.H{"error": "item not found"})
+		c.JSON(404, web.H{"error": "item not found"})
 		return
 	}
 
@@ -1761,7 +1761,7 @@ func (h *Handler) PatchXAIKey(c *gin.Context) {
 	if len(body.Value.Weight) > 0 {
 		weight, errWeight := parseCredentialWeightPatch(body.Value.Weight)
 		if errWeight != nil {
-			c.JSON(400, gin.H{"error": errWeight.Error()})
+			c.JSON(400, web.H{"error": errWeight.Error()})
 			return
 		}
 		entry.Weight = weight
@@ -1809,7 +1809,7 @@ func (h *Handler) PatchXAIKey(c *gin.Context) {
 	h.persistLocked(c)
 }
 
-func (h *Handler) DeleteXAIKey(c *gin.Context) {
+func (h *Handler) DeleteXAIKey(c *web.Context) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if val := strings.TrimSpace(c.Query("api-key")); val != "" {
@@ -1839,7 +1839,7 @@ func (h *Handler) DeleteXAIKey(c *gin.Context) {
 			}
 		}
 		if matchCount > 1 {
-			c.JSON(400, gin.H{"error": "multiple items match api-key; base-url is required"})
+			c.JSON(400, web.H{"error": "multiple items match api-key; base-url is required"})
 			return
 		}
 		if matchIndex != -1 {
@@ -1859,18 +1859,18 @@ func (h *Handler) DeleteXAIKey(c *gin.Context) {
 			return
 		}
 	}
-	c.JSON(400, gin.H{"error": "missing api-key or index"})
+	c.JSON(400, web.H{"error": "missing api-key or index"})
 }
 
 // meta-api-key: []MetaKey
-func (h *Handler) GetMetaKeys(c *gin.Context) {
-	c.JSON(200, gin.H{"meta-api-key": h.metaKeysWithAuthIndex()})
+func (h *Handler) GetMetaKeys(c *web.Context) {
+	c.JSON(200, web.H{"meta-api-key": h.metaKeysWithAuthIndex()})
 }
 
-func (h *Handler) PutMetaKeys(c *gin.Context) {
+func (h *Handler) PutMetaKeys(c *web.Context) {
 	data, errRead := c.GetRawData()
 	if errRead != nil {
-		c.JSON(400, gin.H{"error": "failed to read body"})
+		c.JSON(400, web.H{"error": "failed to read body"})
 		return
 	}
 	var arr []config.MetaKey
@@ -1879,7 +1879,7 @@ func (h *Handler) PutMetaKeys(c *gin.Context) {
 			Items []config.MetaKey `json:"items"`
 		}
 		if errObject := json.Unmarshal(data, &obj); errObject != nil || len(obj.Items) == 0 {
-			c.JSON(400, gin.H{"error": "invalid body"})
+			c.JSON(400, web.H{"error": "invalid body"})
 			return
 		}
 		arr = obj.Items
@@ -1903,7 +1903,7 @@ func (h *Handler) PutMetaKeys(c *gin.Context) {
 	h.persistLocked(c)
 }
 
-func (h *Handler) PatchMetaKey(c *gin.Context) {
+func (h *Handler) PatchMetaKey(c *web.Context) {
 	type metaKeyPatch struct {
 		APIKey              *string                          `json:"api-key"`
 		Priority            *int                             `json:"priority"`
@@ -1924,7 +1924,7 @@ func (h *Handler) PatchMetaKey(c *gin.Context) {
 		Value *metaKeyPatch `json:"value"`
 	}
 	if errBind := c.ShouldBindJSON(&body); errBind != nil || body.Value == nil {
-		c.JSON(400, gin.H{"error": "invalid body"})
+		c.JSON(400, web.H{"error": "invalid body"})
 		return
 	}
 
@@ -1944,7 +1944,7 @@ func (h *Handler) PatchMetaKey(c *gin.Context) {
 		}
 	}
 	if targetIndex == -1 {
-		c.JSON(404, gin.H{"error": "item not found"})
+		c.JSON(404, web.H{"error": "item not found"})
 		return
 	}
 
@@ -1958,7 +1958,7 @@ func (h *Handler) PatchMetaKey(c *gin.Context) {
 	if len(body.Value.Weight) > 0 {
 		weight, errWeight := parseCredentialWeightPatch(body.Value.Weight)
 		if errWeight != nil {
-			c.JSON(400, gin.H{"error": errWeight.Error()})
+			c.JSON(400, web.H{"error": errWeight.Error()})
 			return
 		}
 		entry.Weight = weight
@@ -2000,7 +2000,7 @@ func (h *Handler) PatchMetaKey(c *gin.Context) {
 	h.persistLocked(c)
 }
 
-func (h *Handler) DeleteMetaKey(c *gin.Context) {
+func (h *Handler) DeleteMetaKey(c *web.Context) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if val := strings.TrimSpace(c.Query("api-key")); val != "" {
@@ -2030,7 +2030,7 @@ func (h *Handler) DeleteMetaKey(c *gin.Context) {
 			}
 		}
 		if matchCount > 1 {
-			c.JSON(400, gin.H{"error": "multiple items match api-key; base-url is required"})
+			c.JSON(400, web.H{"error": "multiple items match api-key; base-url is required"})
 			return
 		}
 		if matchIndex != -1 {
@@ -2050,10 +2050,10 @@ func (h *Handler) DeleteMetaKey(c *gin.Context) {
 			return
 		}
 	}
-	c.JSON(400, gin.H{"error": "missing api-key or index"})
+	c.JSON(400, web.H{"error": "missing api-key or index"})
 }
 
-func applyDisableCoolingPatch(c *gin.Context, raw json.RawMessage, target **bool) bool {
+func applyDisableCoolingPatch(c *web.Context, raw json.RawMessage, target **bool) bool {
 	if len(raw) == 0 {
 		return true
 	}
@@ -2063,7 +2063,7 @@ func applyDisableCoolingPatch(c *gin.Context, raw json.RawMessage, target **bool
 	}
 	var value bool
 	if errUnmarshal := json.Unmarshal(raw, &value); errUnmarshal != nil {
-		c.JSON(400, gin.H{"error": "disable-cooling must be a boolean or null"})
+		c.JSON(400, web.H{"error": "disable-cooling must be a boolean or null"})
 		return false
 	}
 	*target = &value

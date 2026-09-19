@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/clienterror"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/interfaces"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
@@ -43,9 +43,9 @@ func (e responseBodyOnlyTestError) StatusCode() int      { return e.status }
 func (e responseBodyOnlyTestError) ResponseBody() []byte { return e.body }
 
 func TestWriteErrorResponse_AddonHeadersDisabledByDefault(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 	c.Request = httptest.NewRequest(http.MethodGet, "/", nil)
 
 	handler := NewBaseAPIHandlers(nil, nil)
@@ -70,9 +70,9 @@ func TestWriteErrorResponse_AddonHeadersDisabledByDefault(t *testing.T) {
 }
 
 func TestWriteErrorResponseDirectResponse(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 	c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
 	c.Writer.Header().Set("X-Cpa-Trace-Id", "local-trace")
 	c.Writer.Header().Set("Access-Control-Allow-Origin", "https://trusted.example")
@@ -124,9 +124,9 @@ func TestExecutionErrorMessagePreservesMarkedResponseBodyExactly(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gin.SetMode(gin.TestMode)
+			web.SetMode(web.TestMode)
 			recorder := httptest.NewRecorder()
-			c, _ := gin.CreateTestContext(recorder)
+			c, _ := web.CreateTestContext(recorder)
 			c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
 
 			errUpstream := directResponseTestError{status: tt.status, body: tt.body, direct: true}
@@ -163,9 +163,9 @@ func TestExecutionErrorMessageDoesNotTrustResponseBodyWithoutMarker(t *testing.T
 }
 
 func TestInternalConcurrencyBusyWritesRetryAfterWithoutPassthrough(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 	c.Request = httptest.NewRequest(http.MethodGet, "/", nil)
 
 	handler := NewBaseAPIHandlers(nil, nil)
@@ -185,9 +185,9 @@ func TestInternalConcurrencyBusyWritesRetryAfterWithoutPassthrough(t *testing.T)
 func TestWriteErrorResponseHomeBusyNormalAndStreamHeaders(t *testing.T) {
 	for _, stream := range []bool{false, true} {
 		t.Run(map[bool]string{false: "normal", true: "stream"}[stream], func(t *testing.T) {
-			gin.SetMode(gin.TestMode)
+			web.SetMode(web.TestMode)
 			recorder := httptest.NewRecorder()
-			c, _ := gin.CreateTestContext(recorder)
+			c, _ := web.CreateTestContext(recorder)
 			c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", nil)
 			if stream {
 				c.Request.Header.Set("Accept", "text/event-stream")
@@ -209,9 +209,9 @@ func TestWriteErrorResponseHomeBusyNormalAndStreamHeaders(t *testing.T) {
 }
 
 func TestWriteErrorResponse_AddonHeadersEnabled(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 	c.Request = httptest.NewRequest(http.MethodGet, "/", nil)
 	c.Writer.Header().Set("X-Request-Id", "old-value")
 	c.Writer.Header().Set("x-cpa-trace-id", "local-trace")
@@ -887,9 +887,9 @@ func TestStatusFromErrorMapsContextStatuses(t *testing.T) {
 }
 
 func TestWriteErrorResponse_ContextCanceledUses499(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 	c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
 
 	handler := NewBaseAPIHandlers(nil, nil)

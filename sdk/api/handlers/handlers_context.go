@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"golang.org/x/net/context"
 )
 
@@ -156,7 +156,7 @@ func headersFromContext(ctx context.Context) http.Header {
 	if ctx == nil {
 		return nil
 	}
-	if ginCtx, ok := ctx.Value("gin").(*gin.Context); ok && ginCtx != nil && ginCtx.Request != nil {
+	if ginCtx, ok := ctx.Value("gin").(*web.Context); ok && ginCtx != nil && ginCtx.Request != nil {
 		return ginCtx.Request.Header.Clone()
 	}
 	return nil
@@ -170,7 +170,7 @@ func queryFromContext(ctx context.Context) url.Values {
 	if ctx == nil {
 		return nil
 	}
-	if ginCtx, ok := ctx.Value("gin").(*gin.Context); ok && ginCtx != nil && ginCtx.Request != nil && ginCtx.Request.URL != nil {
+	if ginCtx, ok := ctx.Value("gin").(*web.Context); ok && ginCtx != nil && ginCtx.Request != nil && ginCtx.Request.URL != nil {
 		return ginCtx.Request.URL.Query()
 	}
 	return nil

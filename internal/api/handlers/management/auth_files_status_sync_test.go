@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
@@ -55,7 +55,7 @@ func TestPatchAuthFileStatusInvokesPostAuthPersistHook(t *testing.T) {
 
 	// 1. Disable the credential
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/status", strings.NewReader(`{"name":"codex-test.json","disabled":true}`))
 	req.Header.Set("Content-Type", "application/json")
 	ctx.Request = req
@@ -74,7 +74,7 @@ func TestPatchAuthFileStatusInvokesPostAuthPersistHook(t *testing.T) {
 
 	// 2. Re-enable the credential
 	rec = httptest.NewRecorder()
-	ctx, _ = gin.CreateTestContext(rec)
+	ctx, _ = web.CreateTestContext(rec)
 	req = httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/status", strings.NewReader(`{"name":"codex-test.json","disabled":false}`))
 	req.Header.Set("Content-Type", "application/json")
 	ctx.Request = req
@@ -139,7 +139,7 @@ func TestPatchAuthFileStatusDoesNotHoldLockAcrossPersistHook(t *testing.T) {
 	go func() {
 		defer close(finishedA)
 		rec := httptest.NewRecorder()
-		ctx, _ := gin.CreateTestContext(rec)
+		ctx, _ := web.CreateTestContext(rec)
 		req := httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/status", strings.NewReader(`{"name":"codex-status-a.json","disabled":true}`))
 		req.Header.Set("Content-Type", "application/json")
 		ctx.Request = req
@@ -173,7 +173,7 @@ func TestPatchAuthFileStatusDoesNotHoldLockAcrossPersistHook(t *testing.T) {
 	}, 1)
 	go func() {
 		rec := httptest.NewRecorder()
-		ctx, _ := gin.CreateTestContext(rec)
+		ctx, _ := web.CreateTestContext(rec)
 		req := httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/status", strings.NewReader(`{"name":"codex-status-b.json","disabled":true}`))
 		req.Header.Set("Content-Type", "application/json")
 		ctx.Request = req
@@ -257,7 +257,7 @@ func TestPatchAuthFileStatusRestoresModelsViaSyncHook(t *testing.T) {
 
 	// Step 1: Confirm models exist before disabling
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodGet, "/v0/management/auth-files/models?name="+fileName, nil)
 	h.GetAuthFileModels(ctx)
 	if rec.Code != http.StatusOK {
@@ -272,7 +272,7 @@ func TestPatchAuthFileStatusRestoresModelsViaSyncHook(t *testing.T) {
 
 	// Step 2: Disable the credential
 	rec = httptest.NewRecorder()
-	ctx, _ = gin.CreateTestContext(rec)
+	ctx, _ = web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/status", strings.NewReader(`{"name":"codex-models.json","disabled":true}`))
 	req.Header.Set("Content-Type", "application/json")
 	ctx.Request = req
@@ -282,7 +282,7 @@ func TestPatchAuthFileStatusRestoresModelsViaSyncHook(t *testing.T) {
 	}
 
 	rec = httptest.NewRecorder()
-	ctx, _ = gin.CreateTestContext(rec)
+	ctx, _ = web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodGet, "/v0/management/auth-files/models?name="+fileName, nil)
 	h.GetAuthFileModels(ctx)
 	resp.Models = nil
@@ -292,7 +292,7 @@ func TestPatchAuthFileStatusRestoresModelsViaSyncHook(t *testing.T) {
 
 	// Step 3: Re-enable the credential
 	rec = httptest.NewRecorder()
-	ctx, _ = gin.CreateTestContext(rec)
+	ctx, _ = web.CreateTestContext(rec)
 	req = httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/status", strings.NewReader(`{"name":"codex-models.json","disabled":false}`))
 	req.Header.Set("Content-Type", "application/json")
 	ctx.Request = req
@@ -303,7 +303,7 @@ func TestPatchAuthFileStatusRestoresModelsViaSyncHook(t *testing.T) {
 
 	// Step 4: Confirm models are restored without restart
 	rec = httptest.NewRecorder()
-	ctx, _ = gin.CreateTestContext(rec)
+	ctx, _ = web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodGet, "/v0/management/auth-files/models?name="+fileName, nil)
 	h.GetAuthFileModels(ctx)
 	resp.Models = nil
@@ -342,7 +342,7 @@ func TestPatchPluginVirtualSourceStatusInvokesPostAuthPersistHook(t *testing.T) 
 
 	// Disable the source file
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/status", strings.NewReader(`{"name":"source-sync.json","disabled":true}`))
 	req.Header.Set("Content-Type", "application/json")
 	ctx.Request = req
@@ -364,7 +364,7 @@ func TestPatchPluginVirtualSourceStatusInvokesPostAuthPersistHook(t *testing.T) 
 	// Re-enable the source file
 	hookCalls = nil
 	rec = httptest.NewRecorder()
-	ctx, _ = gin.CreateTestContext(rec)
+	ctx, _ = web.CreateTestContext(rec)
 	req = httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/status", strings.NewReader(`{"name":"source-sync.json","disabled":false}`))
 	req.Header.Set("Content-Type", "application/json")
 	ctx.Request = req
@@ -414,7 +414,7 @@ func TestPatchAuthFileStatusHookErrorReturns500(t *testing.T) {
 	})
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/status", strings.NewReader(`{"name":"codex-hook-err.json","disabled":true}`))
 	req.Header.Set("Content-Type", "application/json")
 	ctx.Request = req
@@ -450,7 +450,7 @@ func TestPatchPluginVirtualSourceStatusHookErrorReturnsError(t *testing.T) {
 	})
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/status", strings.NewReader(`{"name":"source-hook-err.json","disabled":true}`))
 	req.Header.Set("Content-Type", "application/json")
 	ctx.Request = req

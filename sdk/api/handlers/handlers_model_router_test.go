@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	internalconfig "github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 	coreexecutor "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/executor"
@@ -836,9 +836,9 @@ func TestStreamWithPluginExecutorReturnedHeadersImmutableAfterReturn(t *testing.
 }
 
 func TestQueryFromContextNilURLDoesNotPanic(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 	c.Request = &http.Request{Header: make(http.Header)}
 	ctx := context.WithValue(context.Background(), "gin", c)
 	if got := queryFromContext(ctx); got != nil {

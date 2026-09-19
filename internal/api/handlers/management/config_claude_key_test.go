@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 )
 
@@ -22,7 +22,7 @@ func TestPatchClaudeKeyFingerprintProfile(t *testing.T) {
 
 	// Patch fingerprint-profile to claude-code-cli
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPatch, "/v0/management/claude-api-key",
 		strings.NewReader(`{"index":0,"value":{"fingerprint-profile":"claude-code-cli"}}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
@@ -37,7 +37,7 @@ func TestPatchClaudeKeyFingerprintProfile(t *testing.T) {
 
 	// Patch fingerprint-profile back to empty
 	rec = httptest.NewRecorder()
-	ctx, _ = gin.CreateTestContext(rec)
+	ctx, _ = web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPatch, "/v0/management/claude-api-key",
 		strings.NewReader(`{"index":0,"value":{"fingerprint-profile":""}}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
@@ -53,7 +53,7 @@ func TestPatchClaudeKeyFingerprintProfile(t *testing.T) {
 	// A legacy alias is stored in canonical form so the config file and the request
 	// path agree on one spelling.
 	rec = httptest.NewRecorder()
-	ctx, _ = gin.CreateTestContext(rec)
+	ctx, _ = web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPatch, "/v0/management/claude-api-key",
 		strings.NewReader(`{"index":0,"value":{"fingerprint-profile":"  OAuth-CLI "}}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
@@ -78,7 +78,7 @@ func TestPatchClaudeKeyRejectsUnknownFingerprintProfile(t *testing.T) {
 	h := &Handler{cfg: cfg, configFilePath: writeTestConfigFile(t)}
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPatch, "/v0/management/claude-api-key",
 		strings.NewReader(`{"index":0,"value":{"fingerprint-profile":"claude-code"}}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
@@ -100,7 +100,7 @@ func TestPutClaudeKeysRejectsUnknownFingerprintProfile(t *testing.T) {
 	h := &Handler{cfg: cfg, configFilePath: writeTestConfigFile(t)}
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPut, "/v0/management/claude-api-key",
 		strings.NewReader(`[{"api-key":"k1"},{"api-key":"k2","fingerprint-profile":"claude-cli"}]`))
 	ctx.Request.Header.Set("Content-Type", "application/json")

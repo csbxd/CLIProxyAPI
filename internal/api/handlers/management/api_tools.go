@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	xaiauth "github.com/router-for-me/CLIProxyAPI/v7/internal/auth/xai"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/runtime/executor"
@@ -100,34 +100,34 @@ type apiCallResponse struct {
 //	  -H "Authorization: Bearer 831227" \
 //	  -H "Content-Type: application/json" \
 //	  -d '{"auth_index":"<AUTH_INDEX>","method":"POST","url":"https://api.example.com/v1/fetchAvailableModels","header":{"Authorization":"Bearer $TOKEN$","Content-Type":"application/json","User-Agent":"cliproxyapi"},"data":"{}"}'
-func (h *Handler) APICall(c *gin.Context) {
+func (h *Handler) APICall(c *web.Context) {
 	var body apiCallRequest
 	if errBindJSON := c.ShouldBindJSON(&body); errBindJSON != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "invalid body"})
 		return
 	}
 
 	method := strings.ToUpper(strings.TrimSpace(body.Method))
 	if method == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing method"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "missing method"})
 		return
 	}
 
 	urlStr := strings.TrimSpace(body.URL)
 	if urlStr == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing url"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "missing url"})
 		return
 	}
 	parsedURL, errParseURL := url.Parse(urlStr)
 	if errParseURL != nil || parsedURL.Scheme == "" || parsedURL.Host == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid url"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "invalid url"})
 		return
 	}
 
 	requestProxyURL := strings.TrimSpace(body.ProxyURL)
 	if requestProxyURL != "" {
 		if _, errParseProxy := proxyutil.Parse(requestProxyURL); errParseProxy != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid proxy_url"})
+			c.JSON(http.StatusBadRequest, web.H{"error": "invalid proxy_url"})
 			return
 		}
 	}
@@ -167,7 +167,7 @@ func (h *Handler) APICall(c *gin.Context) {
 			continue
 		}
 		if errToken := resolveToken(); errToken != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": errToken.Error()})
+			c.JSON(http.StatusBadRequest, web.H{"error": errToken.Error()})
 			return
 		}
 		reqHeaders[key] = strings.ReplaceAll(value, "$TOKEN$", token)
@@ -175,7 +175,7 @@ func (h *Handler) APICall(c *gin.Context) {
 
 	if strings.Contains(body.Data, "$TOKEN$") {
 		if errToken := resolveToken(); errToken != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": errToken.Error()})
+			c.JSON(http.StatusBadRequest, web.H{"error": errToken.Error()})
 			return
 		}
 		replacement := token
@@ -194,7 +194,7 @@ func (h *Handler) APICall(c *gin.Context) {
 
 	req, errNewRequest := http.NewRequestWithContext(c.Request.Context(), method, urlStr, requestBody)
 	if errNewRequest != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to build request"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "failed to build request"})
 		return
 	}
 
@@ -217,7 +217,7 @@ func (h *Handler) APICall(c *gin.Context) {
 	resp, errDo := httpClient.Do(req)
 	if errDo != nil {
 		log.WithError(errDo).Debug("management APICall request failed")
-		c.JSON(http.StatusBadGateway, gin.H{"error": "request failed"})
+		c.JSON(http.StatusBadGateway, web.H{"error": "request failed"})
 		return
 	}
 	defer func() {
@@ -228,7 +228,7 @@ func (h *Handler) APICall(c *gin.Context) {
 
 	respBody, errReadAll := io.ReadAll(resp.Body)
 	if errReadAll != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to read response"})
+		c.JSON(http.StatusBadGateway, web.H{"error": "failed to read response"})
 		return
 	}
 

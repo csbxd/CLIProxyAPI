@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 )
 
@@ -16,7 +16,7 @@ func TestPatchDisableCoolingOverrideForEveryFamily(t *testing.T) {
 	tests := []struct {
 		name  string
 		setup func(*config.Config)
-		patch func(*Handler, *gin.Context)
+		patch func(*Handler, *web.Context)
 		get   func(*config.Config) *bool
 	}{
 		{
@@ -115,7 +115,7 @@ func TestPatchDisableCoolingOverrideForEveryFamily(t *testing.T) {
 			patch := func(value string) *httptest.ResponseRecorder {
 				t.Helper()
 				rec := httptest.NewRecorder()
-				ctx, _ := gin.CreateTestContext(rec)
+				ctx, _ := web.CreateTestContext(rec)
 				body := fmt.Sprintf(`{"index":0,"value":{"disable-cooling":%s}}`, value)
 				ctx.Request = httptest.NewRequest(http.MethodPatch, "/v0/management/key", strings.NewReader(body))
 				ctx.Request.Header.Set("Content-Type", "application/json")

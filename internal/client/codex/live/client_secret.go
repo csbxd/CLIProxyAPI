@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 )
 
 const (
@@ -207,7 +207,7 @@ func bearerToken(request *http.Request) string {
 }
 
 // CreateClientSecret creates a short-lived credential scoped to this proxy.
-func (h *Handler) CreateClientSecret(c *gin.Context) {
+func (h *Handler) CreateClientSecret(c *web.Context) {
 	if h == nil || h.clientSecrets == nil {
 		writeRealtimeError(c, http.StatusServiceUnavailable, "Realtime client secret service unavailable", "server_error", "realtime_client_secret_unavailable")
 		return
@@ -232,7 +232,7 @@ func (h *Handler) CreateClientSecret(c *gin.Context) {
 }
 
 // CreateLegacySession implements the deprecated Realtime session credential endpoint.
-func (h *Handler) CreateLegacySession(c *gin.Context) {
+func (h *Handler) CreateLegacySession(c *web.Context) {
 	if h == nil || h.clientSecrets == nil {
 		writeRealtimeError(c, http.StatusServiceUnavailable, "Realtime client secret service unavailable", "server_error", "realtime_client_secret_unavailable")
 		return
@@ -249,7 +249,7 @@ func (h *Handler) CreateLegacySession(c *gin.Context) {
 	h.createClientSecret(c, json.RawMessage(body), nil, true)
 }
 
-func (h *Handler) createClientSecret(c *gin.Context, session json.RawMessage, expiresAfter *struct {
+func (h *Handler) createClientSecret(c *web.Context, session json.RawMessage, expiresAfter *struct {
 	Anchor  string `json:"anchor"`
 	Seconds int64  `json:"seconds"`
 }, legacy bool) {
@@ -293,7 +293,7 @@ func (h *Handler) createClientSecret(c *gin.Context, session json.RawMessage, ex
 			writeRealtimeError(c, http.StatusInternalServerError, "Failed to encode Realtime session", "server_error", "realtime_session_failed")
 			return
 		}
-		response["client_secret"] = gin.H{"value": token, "expires_at": expiresAt.Unix()}
+		response["client_secret"] = web.H{"value": token, "expires_at": expiresAt.Unix()}
 		c.JSON(http.StatusOK, response)
 		return
 	}
@@ -376,7 +376,7 @@ func codexRealtimeModel(model string) string {
 	return trimmed
 }
 
-func liveSelectionHeaders(c *gin.Context) http.Header {
+func liveSelectionHeaders(c *web.Context) http.Header {
 	if c == nil || c.Request == nil {
 		return make(http.Header)
 	}
@@ -388,7 +388,7 @@ func liveSelectionHeaders(c *gin.Context) http.Header {
 	return headers
 }
 
-func requestOwner(c *gin.Context) (string, string) {
+func requestOwner(c *web.Context) (string, string) {
 	if c == nil {
 		return "", ""
 	}
@@ -399,7 +399,7 @@ func requestOwner(c *gin.Context) (string, string) {
 	return strings.TrimSpace(principal), strings.TrimSpace(provider)
 }
 
-func clientSecretSession(c *gin.Context) json.RawMessage {
+func clientSecretSession(c *web.Context) json.RawMessage {
 	if c == nil {
 		return nil
 	}
@@ -411,8 +411,8 @@ func clientSecretSession(c *gin.Context) json.RawMessage {
 	return append(json.RawMessage(nil), session...)
 }
 
-func writeRealtimeError(c *gin.Context, status int, message, errorType, code string) {
-	c.JSON(status, gin.H{"error": gin.H{
+func writeRealtimeError(c *web.Context, status int, message, errorType, code string) {
+	c.JSON(status, web.H{"error": web.H{
 		"message": message,
 		"type":    errorType,
 		"param":   nil,

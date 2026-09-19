@@ -10,16 +10,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/clienterror"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/interfaces"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
 )
 
 func TestExtractRequestBodyPrefersOverride(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 
 	wrapper := &ResponseWriterWrapper{
 		requestInfo: &RequestInfo{Body: []byte("original-body")},
@@ -38,9 +38,9 @@ func TestExtractRequestBodyPrefersOverride(t *testing.T) {
 }
 
 func TestExtractRequestBodySupportsStringOverride(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 
 	wrapper := &ResponseWriterWrapper{body: &bytes.Buffer{}}
 	c.Set(requestBodyOverrideContextKey, "override-as-string")
@@ -52,9 +52,9 @@ func TestExtractRequestBodySupportsStringOverride(t *testing.T) {
 }
 
 func TestExtractResponseBodyPrefersOverride(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 
 	wrapper := &ResponseWriterWrapper{body: &bytes.Buffer{}}
 	wrapper.body.WriteString("original-response")
@@ -77,9 +77,9 @@ func TestExtractResponseBodyPrefersOverride(t *testing.T) {
 }
 
 func TestExtractResponseBodySupportsStringOverride(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 
 	wrapper := &ResponseWriterWrapper{}
 	c.Set(responseBodyOverrideContextKey, "override-response-as-string")
@@ -91,9 +91,9 @@ func TestExtractResponseBodySupportsStringOverride(t *testing.T) {
 }
 
 func TestExtractBodyOverrideClonesBytes(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 
 	override := []byte("body-override")
 	c.Set(requestBodyOverrideContextKey, override)
@@ -110,9 +110,9 @@ func TestExtractBodyOverrideClonesBytes(t *testing.T) {
 }
 
 func TestExtractWebsocketTimelineUsesOverride(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 
 	wrapper := &ResponseWriterWrapper{}
 	if got := wrapper.extractWebsocketTimeline(c); got != nil {
@@ -127,9 +127,9 @@ func TestExtractWebsocketTimelineUsesOverride(t *testing.T) {
 }
 
 func TestFinalizeStreamingWritesAPIWebsocketTimeline(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 
 	streamWriter := &testStreamingLogWriter{}
 	wrapper := &ResponseWriterWrapper{
@@ -283,7 +283,7 @@ func TestHasActionableError(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			recorder := httptest.NewRecorder()
-			c, _ := gin.CreateTestContext(recorder)
+			c, _ := web.CreateTestContext(recorder)
 			req := httptest.NewRequest(http.MethodPost, "/v1/responses", nil)
 			if tc.ctx != nil {
 				req = req.WithContext(tc.ctx)
@@ -324,9 +324,9 @@ func (l *recordingRequestLogger) LogRequestWithOptions(url, method string, reque
 }
 
 func TestFinalizeExcludes499FromForceLog(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", nil)
 
 	logger := &recordingRequestLogger{enabled: false}
@@ -352,9 +352,9 @@ func TestFinalizeExcludes499FromForceLog(t *testing.T) {
 }
 
 func TestFinalizeIncludes500InForceLog(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", nil)
 
 	logger := &recordingRequestLogger{enabled: false}

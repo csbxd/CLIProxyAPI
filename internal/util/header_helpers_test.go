@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 )
 
 func TestApplyCustomHeadersFromAttrs_StaticHeaders(t *testing.T) {
@@ -94,9 +94,9 @@ func TestApplyCustomHeadersFromAttrs_MagicVariable(t *testing.T) {
 	})
 
 	t.Run("fallback to gin context in request context", func(t *testing.T) {
-		gin.SetMode(gin.TestMode)
+		web.SetMode(web.TestMode)
 		w := httptest.NewRecorder()
-		ginCtx, _ := gin.CreateTestContext(w)
+		ginCtx, _ := web.CreateTestContext(w)
 		ginReq := httptest.NewRequest(http.MethodPost, "/", nil)
 		ginReq.Header.Set("ABC", "from-gin-ctx-123")
 		ginCtx.Request = ginReq

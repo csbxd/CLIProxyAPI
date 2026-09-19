@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/google/uuid"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/clienterror"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
@@ -167,7 +167,7 @@ func isSupportedVideosModel(model string) bool {
 	return isXAIVideosModel(model) || isSoraVideosModel(model)
 }
 
-func rejectUnsupportedVideosModel(c *gin.Context, model string) bool {
+func rejectUnsupportedVideosModel(c *web.Context, model string) bool {
 	if isSupportedVideosModel(model) {
 		return false
 	}
@@ -180,7 +180,7 @@ func rejectUnsupportedVideosModel(c *gin.Context, model string) bool {
 	return true
 }
 
-func rejectUnsupportedNativeVideosModel(c *gin.Context, model string) bool {
+func rejectUnsupportedNativeVideosModel(c *web.Context, model string) bool {
 	if isXAIVideosModel(model) {
 		return false
 	}
@@ -226,7 +226,7 @@ func responseVideosModel(model string) string {
 	return canonicalXAIVideosModel(model)
 }
 
-func readVideosCreateRequest(c *gin.Context) ([]byte, error) {
+func readVideosCreateRequest(c *web.Context) ([]byte, error) {
 	contentType := strings.ToLower(strings.TrimSpace(c.ContentType()))
 	switch contentType {
 	case "multipart/form-data", "application/x-www-form-urlencoded":
@@ -243,7 +243,7 @@ func readVideosCreateRequest(c *gin.Context) ([]byte, error) {
 	}
 }
 
-func readXAIVideosNativeRequest(c *gin.Context) ([]byte, error) {
+func readXAIVideosNativeRequest(c *web.Context) ([]byte, error) {
 	rawJSON, err := handlers.ReadRequestBody(c)
 	if err != nil {
 		return nil, err
@@ -254,7 +254,7 @@ func readXAIVideosNativeRequest(c *gin.Context) ([]byte, error) {
 	return rawJSON, nil
 }
 
-func videosCreateRequestFromForm(c *gin.Context) ([]byte, error) {
+func videosCreateRequestFromForm(c *web.Context) ([]byte, error) {
 	rawJSON := []byte(`{}`)
 	for _, field := range []string{"model", "prompt", "seconds", "size", "aspect_ratio", "resolution"} {
 		if value := strings.TrimSpace(c.PostForm(field)); value != "" {
@@ -277,7 +277,7 @@ func videosCreateRequestFromForm(c *gin.Context) ([]byte, error) {
 	return rawJSON, nil
 }
 
-func firstPostForm(c *gin.Context, keys ...string) string {
+func firstPostForm(c *web.Context, keys ...string) string {
 	for _, key := range keys {
 		if value := c.PostForm(key); strings.TrimSpace(value) != "" {
 			return value
@@ -573,7 +573,7 @@ func buildVideosFailedAPIResponse(model string, code string, message string) []b
 	return out
 }
 
-func writeVideosFailedError(c *gin.Context, status int, model string, code string, message string) {
+func writeVideosFailedError(c *web.Context, status int, model string, code string, message string) {
 	if status <= 0 {
 		status = http.StatusBadRequest
 	}
@@ -689,7 +689,7 @@ func openAIVideoStatus(status string) string {
 	}
 }
 
-func (h *OpenAIAPIHandler) VideosCreate(c *gin.Context) {
+func (h *OpenAIAPIHandler) VideosCreate(c *web.Context) {
 	rawJSON, err := readVideosCreateRequest(c)
 	if err != nil {
 		writeVideosFailedError(c, http.StatusBadRequest, defaultXAIVideosModel, "invalid_request_error", fmt.Sprintf("Invalid request: %v", err))
@@ -713,19 +713,19 @@ func (h *OpenAIAPIHandler) VideosCreate(c *gin.Context) {
 	h.collectXAIVideosCreate(c, xaiReq, meta)
 }
 
-func (h *OpenAIAPIHandler) XAIVideosGenerations(c *gin.Context) {
+func (h *OpenAIAPIHandler) XAIVideosGenerations(c *web.Context) {
 	h.handleXAIVideosNativePost(c)
 }
 
-func (h *OpenAIAPIHandler) XAIVideosEdits(c *gin.Context) {
+func (h *OpenAIAPIHandler) XAIVideosEdits(c *web.Context) {
 	h.handleXAIVideosNativePost(c)
 }
 
-func (h *OpenAIAPIHandler) XAIVideosExtensions(c *gin.Context) {
+func (h *OpenAIAPIHandler) XAIVideosExtensions(c *web.Context) {
 	h.handleXAIVideosNativePost(c)
 }
 
-func (h *OpenAIAPIHandler) handleXAIVideosNativePost(c *gin.Context) {
+func (h *OpenAIAPIHandler) handleXAIVideosNativePost(c *web.Context) {
 	rawJSON, err := readXAIVideosNativeRequest(c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, handlers.ErrorResponse{
@@ -750,7 +750,7 @@ func (h *OpenAIAPIHandler) handleXAIVideosNativePost(c *gin.Context) {
 	h.collectXAIVideosNative(c, rawJSON, routingModel, true)
 }
 
-func (h *OpenAIAPIHandler) XAIVideosRetrieve(c *gin.Context) {
+func (h *OpenAIAPIHandler) XAIVideosRetrieve(c *web.Context) {
 	requestID := strings.TrimSpace(c.Param("request_id"))
 	if requestID == "" {
 		requestID = strings.TrimSpace(c.Param("video_id"))
@@ -770,7 +770,7 @@ func (h *OpenAIAPIHandler) XAIVideosRetrieve(c *gin.Context) {
 	h.collectXAIVideosNative(c, payload, defaultXAIVideosModel, false)
 }
 
-func (h *OpenAIAPIHandler) VideosRetrieve(c *gin.Context) {
+func (h *OpenAIAPIHandler) VideosRetrieve(c *web.Context) {
 	videoID := strings.TrimSpace(c.Param("video_id"))
 	if videoID == "" {
 		c.JSON(http.StatusBadRequest, handlers.ErrorResponse{
@@ -820,7 +820,7 @@ func (h *OpenAIAPIHandler) VideosRetrieve(c *gin.Context) {
 	cliCancel(nil)
 }
 
-func (h *OpenAIAPIHandler) VideosContent(c *gin.Context) {
+func (h *OpenAIAPIHandler) VideosContent(c *web.Context) {
 	videoID := strings.TrimSpace(c.Param("video_id"))
 	if videoID == "" {
 		c.JSON(http.StatusBadRequest, handlers.ErrorResponse{
@@ -885,7 +885,7 @@ func (h *OpenAIAPIHandler) VideosContent(c *gin.Context) {
 	cliCancel(nil)
 }
 
-func (h *OpenAIAPIHandler) writeVideoContentFromURL(c *gin.Context, contentURL string) error {
+func (h *OpenAIAPIHandler) writeVideoContentFromURL(c *web.Context, contentURL string) error {
 	req, err := http.NewRequestWithContext(c.Request.Context(), http.MethodGet, contentURL, nil)
 	if err != nil {
 		errMsg := &interfaces.ErrorMessage{
@@ -932,7 +932,7 @@ func (h *OpenAIAPIHandler) writeVideoContentFromURL(c *gin.Context, contentURL s
 	return err
 }
 
-func (h *OpenAIAPIHandler) videoContentHTTPClient(c *gin.Context) *http.Client {
+func (h *OpenAIAPIHandler) videoContentHTTPClient(c *web.Context) *http.Client {
 	ctx := context.Background()
 	if c != nil && c.Request != nil {
 		ctx = c.Request.Context()
@@ -944,7 +944,7 @@ func (h *OpenAIAPIHandler) videoContentHTTPClient(c *gin.Context) *http.Client {
 	return helps.NewProxyAwareHTTPClient(ctx, cfg, h.videoContentDownloadAuth(c), 0)
 }
 
-func (h *OpenAIAPIHandler) videoContentDownloadAuth(c *gin.Context) *coreauth.Auth {
+func (h *OpenAIAPIHandler) videoContentDownloadAuth(c *web.Context) *coreauth.Auth {
 	if h == nil || h.BaseAPIHandler == nil || h.AuthManager == nil || c == nil {
 		return nil
 	}
@@ -971,7 +971,7 @@ func copyVideoContentHeaders(dst http.Header, src http.Header) {
 	}
 }
 
-func (h *OpenAIAPIHandler) collectXAIVideosNative(c *gin.Context, rawJSON []byte, model string, bindCreatedVideoAuth bool) {
+func (h *OpenAIAPIHandler) collectXAIVideosNative(c *web.Context, rawJSON []byte, model string, bindCreatedVideoAuth bool) {
 	c.Header("Content-Type", "application/json")
 
 	cliCtx, cliCancel := h.GetContextWithCancel(h, c, context.Background())
@@ -1008,7 +1008,7 @@ func (h *OpenAIAPIHandler) collectXAIVideosNative(c *gin.Context, rawJSON []byte
 	cliCancel(nil)
 }
 
-func (h *OpenAIAPIHandler) collectXAIVideosCreate(c *gin.Context, xaiReq []byte, meta xaiVideoCreateMetadata) {
+func (h *OpenAIAPIHandler) collectXAIVideosCreate(c *web.Context, xaiReq []byte, meta xaiVideoCreateMetadata) {
 	c.Header("Content-Type", "application/json")
 
 	cliCtx, cliCancel := h.GetContextWithCancel(h, c, context.Background())

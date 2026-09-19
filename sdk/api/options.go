@@ -7,7 +7,7 @@ package api
 import (
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	internalapi "github.com/router-for-me/CLIProxyAPI/v7/internal/api"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/api/handlers"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/config"
@@ -18,15 +18,15 @@ import (
 type ServerOption = internalapi.ServerOption
 
 // WithMiddleware appends additional Gin middleware during server construction.
-func WithMiddleware(mw ...gin.HandlerFunc) ServerOption { return internalapi.WithMiddleware(mw...) }
+func WithMiddleware(mw ...web.HandlerFunc) ServerOption { return internalapi.WithMiddleware(mw...) }
 
 // WithEngineConfigurator allows callers to mutate the Gin engine prior to middleware setup.
-func WithEngineConfigurator(fn func(*gin.Engine)) ServerOption {
+func WithEngineConfigurator(fn func(*web.Engine)) ServerOption {
 	return internalapi.WithEngineConfigurator(fn)
 }
 
 // WithRouterConfigurator appends a callback after default routes are registered.
-func WithRouterConfigurator(fn func(*gin.Engine, *handlers.BaseAPIHandler, *config.Config)) ServerOption {
+func WithRouterConfigurator(fn func(*web.Engine, *handlers.BaseAPIHandler, *config.Config)) ServerOption {
 	return internalapi.WithRouterConfigurator(fn)
 }
 

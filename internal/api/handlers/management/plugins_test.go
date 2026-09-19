@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/pluginhost"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/pluginapi"
@@ -103,7 +103,7 @@ func TestListPluginsIncludesScannedAndConfiguredPlugins(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
+	c, _ := web.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodGet, "/v0/management/plugins", nil)
 
 	h.ListPlugins(c)
@@ -202,7 +202,7 @@ func TestListPluginsUsesConfiguredStoreVersionWhenFilesCoexist(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
+	c, _ := web.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodGet, "/v0/management/plugins", nil)
 
 	h.ListPlugins(c)
@@ -251,8 +251,8 @@ options:
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-	c.Params = gin.Params{{Key: "id", Value: "sample"}}
+	c, _ := web.CreateTestContext(rec)
+	c.Params = web.Params{{Key: "id", Value: "sample"}}
 	c.Request = httptest.NewRequest(http.MethodGet, "/v0/management/plugins/sample/config", nil)
 
 	h.GetPluginConfig(c)
@@ -296,8 +296,8 @@ func TestGetPluginConfigReturnsEmptyObjectForKnownUnconfiguredPlugin(t *testing.
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-	c.Params = gin.Params{{Key: "id", Value: "scanned"}}
+	c, _ := web.CreateTestContext(rec)
+	c.Params = web.Params{{Key: "id", Value: "scanned"}}
 	c.Request = httptest.NewRequest(http.MethodGet, "/v0/management/plugins/scanned/config", nil)
 
 	h.GetPluginConfig(c)
@@ -323,8 +323,8 @@ func TestGetPluginConfigReturnsNotFoundForUnknownPlugin(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-	c.Params = gin.Params{{Key: "id", Value: "missing"}}
+	c, _ := web.CreateTestContext(rec)
+	c.Params = web.Params{{Key: "id", Value: "missing"}}
 	c.Request = httptest.NewRequest(http.MethodGet, "/v0/management/plugins/missing/config", nil)
 
 	h.GetPluginConfig(c)
@@ -351,8 +351,8 @@ func TestPatchPluginEnabledUpdatesOnlyPluginConfig(t *testing.T) {
 	reloads, reloadDone := captureConfigReload(h)
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-	c.Params = gin.Params{{Key: "id", Value: "sample"}}
+	c, _ := web.CreateTestContext(rec)
+	c.Params = web.Params{{Key: "id", Value: "sample"}}
 	c.Request = httptest.NewRequest(http.MethodPatch, "/v0/management/plugins/sample/enabled", strings.NewReader(`{"enabled":true}`))
 	c.Request.Header.Set("Content-Type", "application/json")
 
@@ -411,8 +411,8 @@ func TestPatchPluginEnabledReloadSnapshotRawImmutability(t *testing.T) {
 	})
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-	c.Params = gin.Params{{Key: "id", Value: "sample"}}
+	c, _ := web.CreateTestContext(rec)
+	c.Params = web.Params{{Key: "id", Value: "sample"}}
 	c.Request = httptest.NewRequest(http.MethodPatch, "/v0/management/plugins/sample/enabled", strings.NewReader(`{"enabled":true}`))
 	c.Request.Header.Set("Content-Type", "application/json")
 
@@ -467,8 +467,8 @@ func TestPutPluginConfigReplacesPluginConfig(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-	c.Params = gin.Params{{Key: "id", Value: "sample"}}
+	c, _ := web.CreateTestContext(rec)
+	c.Params = web.Params{{Key: "id", Value: "sample"}}
 	c.Request = httptest.NewRequest(http.MethodPut, "/v0/management/plugins/sample/config", bytes.NewBufferString(`{"enabled":true,"priority":7,"mode":"fast"}`))
 	c.Request.Header.Set("Content-Type", "application/json")
 
@@ -502,8 +502,8 @@ func TestPatchPluginConfigMergesAndDeletesFields(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-	c.Params = gin.Params{{Key: "id", Value: "sample"}}
+	c, _ := web.CreateTestContext(rec)
+	c.Params = web.Params{{Key: "id", Value: "sample"}}
 	c.Request = httptest.NewRequest(http.MethodPatch, "/v0/management/plugins/sample/config", strings.NewReader(`{"mode":"fast","remove":null,"count":3}`))
 	c.Request.Header.Set("Content-Type", "application/json")
 
@@ -549,8 +549,8 @@ func TestDeletePluginRejectsUnresolvedPluginsDir(t *testing.T) {
 		configFilePath: writeTestConfigFile(t),
 	}
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-	c.Params = gin.Params{{Key: "id", Value: "sample"}}
+	c, _ := web.CreateTestContext(rec)
+	c.Params = web.Params{{Key: "id", Value: "sample"}}
 	c.Request = httptest.NewRequest(http.MethodDelete, "/v0/management/plugins/sample", nil)
 
 	h.DeletePlugin(c)
@@ -611,8 +611,8 @@ func TestDeletePluginRemovesDiscoveredFileAndConfig(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-	c.Params = gin.Params{{Key: "id", Value: "sample"}}
+	c, _ := web.CreateTestContext(rec)
+	c.Params = web.Params{{Key: "id", Value: "sample"}}
 	c.Request = httptest.NewRequest(http.MethodDelete, "/v0/management/plugins/sample", nil)
 
 	done := make(chan struct{})
@@ -694,8 +694,8 @@ func TestDeletePluginUsesConfiguredStoreVersionWhenFilesCoexist(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-	c.Params = gin.Params{{Key: "id", Value: "sample-provider"}}
+	c, _ := web.CreateTestContext(rec)
+	c.Params = web.Params{{Key: "id", Value: "sample-provider"}}
 	c.Request = httptest.NewRequest(http.MethodDelete, "/v0/management/plugins/sample-provider", nil)
 
 	h.DeletePlugin(c)
@@ -723,8 +723,8 @@ func TestDeletePluginReturnsNotFoundForUnknownPlugin(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-	c.Params = gin.Params{{Key: "id", Value: "missing"}}
+	c, _ := web.CreateTestContext(rec)
+	c.Params = web.Params{{Key: "id", Value: "missing"}}
 	c.Request = httptest.NewRequest(http.MethodDelete, "/v0/management/plugins/missing", nil)
 
 	h.DeletePlugin(c)

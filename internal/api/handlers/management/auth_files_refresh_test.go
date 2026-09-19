@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/executor"
@@ -56,7 +56,7 @@ func (e *refreshRecordExecutor) HttpRequest(ctx context.Context, auth *coreauth.
 }
 
 func TestRefreshAuthFiles_AllAndSpecific(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	authDir := t.TempDir()
 
 	fileA := filepath.Join(authDir, "antigravity-1.json")
@@ -87,7 +87,7 @@ func TestRefreshAuthFiles_AllAndSpecific(t *testing.T) {
 
 	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: authDir}, manager)
 
-	engine := gin.New()
+	engine := web.New()
 	engine.POST("/auth-files/refresh", h.RefreshAuthFiles)
 
 	// 1. Refresh all

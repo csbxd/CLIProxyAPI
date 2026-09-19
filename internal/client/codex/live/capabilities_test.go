@@ -9,14 +9,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/executionregistry"
 )
 
 func TestHandleHangupForwardsPinnedOAuthCall(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	manager := auth.NewManager(nil, nil, nil)
 	executor := &captureExecutor{
 		statusCode:   http.StatusOK,
@@ -37,8 +37,8 @@ func TestHandleHangupForwardsPinnedOAuthCall(t *testing.T) {
 		ownerProvider:  "static",
 	})
 
-	router := gin.New()
-	router.POST("/v1/realtime/calls/:call_id/hangup", func(c *gin.Context) {
+	router := web.New()
+	router.POST("/v1/realtime/calls/:call_id/hangup", func(c *web.Context) {
 		c.Set("userApiKey", "owner-key")
 		c.Set("accessProvider", "static")
 		c.Next()
@@ -59,7 +59,7 @@ func TestHandleHangupForwardsPinnedOAuthCall(t *testing.T) {
 
 func TestHandleHangupForwardsUnauthorizedHomeResponseWithoutRefresh(t *testing.T) {
 	const upstreamError = `{"error":{"message":"access token expired"}}`
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	manager := auth.NewManager(nil, nil, nil)
 	manager.SetConfig(&config.Config{Home: config.HomeConfig{Enabled: true}})
 	manager.PublishHomeDispatch(&homeDispatcher{}, executionregistry.New(), 1)
@@ -71,7 +71,7 @@ func TestHandleHangupForwardsUnauthorizedHomeResponseWithoutRefresh(t *testing.T
 	handler := NewHandler(manager, nil)
 	handler.sessions.put("call-123", liveSession{authID: "home-codex-live", model: defaultLiveModel})
 
-	router := gin.New()
+	router := web.New()
 	router.POST("/v1/realtime/calls/:call_id/hangup", handler.HandleHangup)
 	request := httptest.NewRequest(http.MethodPost, "/v1/realtime/calls/call-123/hangup", nil)
 	recorder := httptest.NewRecorder()
@@ -90,7 +90,7 @@ func TestHandleHangupForwardsUnauthorizedHomeResponseWithoutRefresh(t *testing.T
 
 func TestHandleHangupReportsUnauthorizedWhenResponseReadFails(t *testing.T) {
 	const upstreamError = `{"error":{"message":"access token expired"}}`
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	runtimeConfig := &config.Config{
 		Home:      config.HomeConfig{Enabled: true},
 		SDKConfig: config.SDKConfig{RequestLog: true},
@@ -107,9 +107,9 @@ func TestHandleHangupReportsUnauthorizedWhenResponseReadFails(t *testing.T) {
 	handler := NewHandler(manager, runtimeConfig)
 	handler.sessions.put("call-123", liveSession{authID: "home-codex-live", model: defaultLiveModel})
 
-	router := gin.New()
+	router := web.New()
 	var apiResponse []byte
-	router.Use(func(c *gin.Context) {
+	router.Use(func(c *web.Context) {
 		c.Next()
 		if raw, exists := c.Get("API_RESPONSE"); exists {
 			apiResponse, _ = raw.([]byte)
@@ -136,7 +136,7 @@ func TestHandleHangupReportsUnauthorizedWhenResponseReadFails(t *testing.T) {
 }
 
 func TestHandleHangupRejectsDifferentAPIPrincipal(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	handler := NewHandler(auth.NewManager(nil, nil, nil), nil)
 	handler.sessions.put("call-123", liveSession{
 		authID:         "codex-oauth",
@@ -144,8 +144,8 @@ func TestHandleHangupRejectsDifferentAPIPrincipal(t *testing.T) {
 		ownerPrincipal: "owner-key",
 		ownerProvider:  "static",
 	})
-	router := gin.New()
-	router.POST("/v1/realtime/calls/:call_id/hangup", func(c *gin.Context) {
+	router := web.New()
+	router.POST("/v1/realtime/calls/:call_id/hangup", func(c *web.Context) {
 		c.Set("userApiKey", "other-key")
 		c.Set("accessProvider", "static")
 		c.Next()
@@ -159,9 +159,9 @@ func TestHandleHangupRejectsDifferentAPIPrincipal(t *testing.T) {
 }
 
 func TestUnsupportedRealtimeCapabilitiesUseStandardError(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	handler := NewHandler(nil, nil)
-	router := gin.New()
+	router := web.New()
 	router.POST("/v1/realtime/transcription_sessions", handler.HandleTranscriptionSession)
 	router.POST("/v1/realtime/calls/:call_id/accept", handler.HandleSIPControl)
 

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/auth/devin"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/misc"
@@ -42,20 +42,20 @@ func (h *Handler) devinCallbackURL() (string, error) {
 }
 
 // RequestDevinToken starts the same callback/status flow used by the other WebUI providers.
-func (h *Handler) RequestDevinToken(c *gin.Context) {
+func (h *Handler) RequestDevinToken(c *web.Context) {
 	redirectURI, errRedirect := h.devinCallbackURL()
 	if errRedirect != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "callback server unavailable"})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "callback server unavailable"})
 		return
 	}
 	pkceCodes, errPKCE := devin.GeneratePKCECodes()
 	if errPKCE != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate PKCE codes"})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "failed to generate PKCE codes"})
 		return
 	}
 	state, errState := misc.GenerateRandomState()
 	if errState != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate state parameter"})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "failed to generate state parameter"})
 		return
 	}
 
@@ -66,7 +66,7 @@ func (h *Handler) RequestDevinToken(c *gin.Context) {
 	ctx := PopulateAuthContext(context.Background(), c)
 	authDir := h.cfg.AuthDir
 	go h.completeDevinOAuth(ctx, authDir, state, pkceCodes.CodeVerifier, authSvc)
-	c.JSON(http.StatusOK, gin.H{"status": "ok", "url": authURL, "state": state})
+	c.JSON(http.StatusOK, web.H{"status": "ok", "url": authURL, "state": state})
 }
 
 func (h *Handler) completeDevinOAuth(ctx context.Context, authDir, state, codeVerifier string, authSvc devinOAuthService) {

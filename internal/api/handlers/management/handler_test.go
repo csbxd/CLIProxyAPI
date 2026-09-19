@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/pluginhost"
 )
@@ -51,7 +51,7 @@ func TestMiddlewareSetsSupportPluginHeader(t *testing.T) {
 
 	t.Run("invalid key", func(t *testing.T) {
 		rec := httptest.NewRecorder()
-		c, _ := gin.CreateTestContext(rec)
+		c, _ := web.CreateTestContext(rec)
 		c.Request = httptest.NewRequest(http.MethodGet, "/v0/management/config", nil)
 		c.Request.RemoteAddr = "127.0.0.1:12345"
 		c.Request.Header.Set("X-Management-Key", "wrong-secret")
@@ -67,8 +67,8 @@ func TestMiddlewareSetsSupportPluginHeader(t *testing.T) {
 	})
 
 	t.Run("valid key", func(t *testing.T) {
-		engine := gin.New()
-		engine.GET("/v0/management/config", middleware, func(c *gin.Context) {
+		engine := web.New()
+		engine.GET("/v0/management/config", middleware, func(c *web.Context) {
 			c.Status(http.StatusOK)
 		})
 

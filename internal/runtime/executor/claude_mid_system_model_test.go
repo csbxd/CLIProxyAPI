@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/executor"
@@ -39,8 +39,8 @@ type midSystemUpstream struct {
 
 func (u *midSystemUpstream) context(t *testing.T, headers http.Header) context.Context {
 	t.Helper()
-	gin.SetMode(gin.TestMode)
-	ginCtx, _ := gin.CreateTestContext(nil)
+	web.SetMode(web.TestMode)
+	ginCtx, _ := web.CreateTestContext(nil)
 	ginCtx.Request = httptest_NewRequest()
 	ginCtx.Request.Header = headers.Clone()
 	if ginCtx.Request.Header == nil {

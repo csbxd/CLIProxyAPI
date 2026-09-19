@@ -9,14 +9,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 )
 
 func TestUploadAuthFile_PreservesPriorityAttributes(t *testing.T) {
 	t.Setenv("MANAGEMENT_PASSWORD", "")
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	authDir := t.TempDir()
 	manager := coreauth.NewManager(nil, nil, nil)
@@ -38,7 +38,7 @@ func TestUploadAuthFile_PreservesPriorityAttributes(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodPost, "/v0/management/auth-files", &body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	ctx.Request = req
@@ -71,7 +71,7 @@ func TestUploadAuthFile_PreservesPriorityAttributes(t *testing.T) {
 
 func TestUploadAuthFile_InvokesPostAuthPersistHook(t *testing.T) {
 	t.Setenv("MANAGEMENT_PASSWORD", "")
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	authDir := t.TempDir()
 	manager := coreauth.NewManager(nil, nil, nil)
@@ -101,7 +101,7 @@ func TestUploadAuthFile_InvokesPostAuthPersistHook(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodPost, "/v0/management/auth-files", &body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	ctx.Request = req

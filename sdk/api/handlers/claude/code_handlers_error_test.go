@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/interfaces"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/api/handlers"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
@@ -52,9 +52,9 @@ func TestClaudeErrorExtractsClaudeStyleUpstreamJSON(t *testing.T) {
 }
 
 func TestWriteClaudeErrorResponseUsesClaudeEnvelope(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 	handler := &ClaudeCodeAPIHandler{}
 	msg := &interfaces.ErrorMessage{
 		StatusCode: http.StatusBadRequest,
@@ -79,9 +79,9 @@ func TestWriteClaudeErrorResponseUsesClaudeEnvelope(t *testing.T) {
 }
 
 func TestWriteClaudeErrorResponse_IncludesRetryAfterForModelCooldownDefaultSettings(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 	handler := &ClaudeCodeAPIHandler{}
 
 	cooldownErr := coreauth.NewManager(nil, nil, nil)

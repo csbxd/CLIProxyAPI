@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/clienterror"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/runtime/executor/helps"
@@ -19,17 +19,17 @@ import (
 )
 
 // HandleTranslation reports that the Codex OAuth upstream has no translation session capability.
-func (h *Handler) HandleTranslation(c *gin.Context) {
+func (h *Handler) HandleTranslation(c *web.Context) {
 	writeCapabilityNotSupported(c, "Realtime translation sessions")
 }
 
 // HandleTranscriptionSession reports that the Codex OAuth upstream has no transcription-only capability.
-func (h *Handler) HandleTranscriptionSession(c *gin.Context) {
+func (h *Handler) HandleTranscriptionSession(c *web.Context) {
 	writeCapabilityNotSupported(c, "Realtime transcription-only sessions")
 }
 
 // HandleSIPControl reports that the Codex OAuth upstream has no SIP dialog capability.
-func (h *Handler) HandleSIPControl(c *gin.Context) {
+func (h *Handler) HandleSIPControl(c *web.Context) {
 	action := "control"
 	if c != nil && c.Request != nil && c.Request.URL != nil {
 		parts := strings.Split(strings.Trim(c.Request.URL.Path, "/"), "/")
@@ -41,7 +41,7 @@ func (h *Handler) HandleSIPControl(c *gin.Context) {
 }
 
 // HandleHangup forwards hangup for a locally created WebRTC call using its pinned OAuth credential.
-func (h *Handler) HandleHangup(c *gin.Context) {
+func (h *Handler) HandleHangup(c *web.Context) {
 	if h == nil || h.authManager == nil || h.sessions == nil {
 		writeRealtimeError(c, http.StatusServiceUnavailable, "Codex live session service unavailable", "server_error", "realtime_session_unavailable")
 		return
@@ -215,6 +215,6 @@ func (h *Handler) realtimeHTTPBaseURL() string {
 	return strings.TrimRight(websocketHTTPURL(h.sidebandAPIBaseURL), "/")
 }
 
-func writeCapabilityNotSupported(c *gin.Context, capability string) {
+func writeCapabilityNotSupported(c *web.Context, capability string) {
 	writeRealtimeError(c, http.StatusNotImplemented, capability+" are not supported by the ChatGPT/Codex OAuth upstream", "not_supported_error", "realtime_capability_not_supported")
 }

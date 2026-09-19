@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/gorilla/websocket"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/clienterror"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
@@ -23,7 +23,7 @@ import (
 const defaultStandardRealtimeModel = "gpt-realtime"
 
 // HandleRealtimeWebsocket dispatches a standard Realtime WebSocket or an existing call sideband.
-func (h *Handler) HandleRealtimeWebsocket(c *gin.Context) {
+func (h *Handler) HandleRealtimeWebsocket(c *web.Context) {
 	if strings.TrimSpace(c.Query("call_id")) != "" {
 		h.HandleSideband(c)
 		return
@@ -32,7 +32,7 @@ func (h *Handler) HandleRealtimeWebsocket(c *gin.Context) {
 }
 
 // HandleDirectWebsocket relays a standard Realtime WebSocket through Codex OAuth.
-func (h *Handler) HandleDirectWebsocket(c *gin.Context) {
+func (h *Handler) HandleDirectWebsocket(c *web.Context) {
 	if h == nil || h.authManager == nil {
 		writeRealtimeError(c, http.StatusServiceUnavailable, "Codex auth manager unavailable", "server_error", "codex_auth_unavailable")
 		return

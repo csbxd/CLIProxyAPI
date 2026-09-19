@@ -11,7 +11,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 )
@@ -50,7 +50,7 @@ func TestListAuthFilesFiltersByNameAndAuthIndex(t *testing.T) {
 
 	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: authDir}, manager)
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodGet, "/v0/management/auth-files?name=shared-codex.json&auth_index=idx-b", nil)
 	ctx.Request = req
 
@@ -94,7 +94,7 @@ func TestListAuthFilesFromDiskFiltersByNameAndRejectsAuthIndex(t *testing.T) {
 
 	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: authDir}, nil)
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodGet, "/v0/management/auth-files?name=beta.json", nil)
 
 	h.ListAuthFiles(ctx)
@@ -113,7 +113,7 @@ func TestListAuthFilesFromDiskFiltersByNameAndRejectsAuthIndex(t *testing.T) {
 	}
 
 	rec = httptest.NewRecorder()
-	ctx, _ = gin.CreateTestContext(rec)
+	ctx, _ = web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodGet, "/v0/management/auth-files?name=beta.json&auth_index=idx-b", nil)
 
 	h.ListAuthFiles(ctx)
@@ -151,7 +151,7 @@ func TestPatchAuthFileStatusVerifiesAuthIndex(t *testing.T) {
 
 	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: t.TempDir()}, manager)
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/status", strings.NewReader(`{"name":"shared-codex.json","auth_index":"idx-b","disabled":true}`))
 	req.Header.Set("Content-Type", "application/json")
 	ctx.Request = req
@@ -188,7 +188,7 @@ func TestPatchAuthFileStatusRejectsMismatchedAuthIndex(t *testing.T) {
 
 	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: t.TempDir()}, manager)
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/status", strings.NewReader(`{"name":"shared-codex.json","auth_index":"idx-missing","disabled":true}`))
 	req.Header.Set("Content-Type", "application/json")
 	ctx.Request = req

@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 )
@@ -54,7 +54,7 @@ func TestGetAPIKeyUsage_GroupsByProviderAndAPIKey(t *testing.T) {
 	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: t.TempDir()}, manager)
 
 	rec := httptest.NewRecorder()
-	ginCtx, _ := gin.CreateTestContext(rec)
+	ginCtx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodGet, "/v0/management/api-key-usage", nil)
 	ginCtx.Request = req
 	h.GetAPIKeyUsage(ginCtx)
@@ -114,7 +114,7 @@ func TestGetAPIKeyUsage_GroupsOpenAICompatibleByCompatName(t *testing.T) {
 	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: t.TempDir()}, manager)
 
 	rec := httptest.NewRecorder()
-	ginCtx, _ := gin.CreateTestContext(rec)
+	ginCtx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodGet, "/v0/management/api-key-usage", nil)
 	ginCtx.Request = req
 	h.GetAPIKeyUsage(ginCtx)

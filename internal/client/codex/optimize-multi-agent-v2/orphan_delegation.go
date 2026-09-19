@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
@@ -78,7 +78,7 @@ func RewriteCodexOrphanDelegationInput(ctx context.Context, headers http.Header,
 
 func codexSubagentHeader(ctx context.Context, headers http.Header) string {
 	if ctx != nil {
-		if ginCtx, ok := ctx.Value("gin").(*gin.Context); ok && ginCtx != nil && ginCtx.Request != nil {
+		if ginCtx, ok := ctx.Value("gin").(*web.Context); ok && ginCtx != nil && ginCtx.Request != nil {
 			return headerValueCaseInsensitive(ginCtx.Request.Header, codexOpenAISubagentHeader)
 		}
 	}

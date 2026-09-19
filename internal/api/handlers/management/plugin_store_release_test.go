@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/pluginstore"
 )
@@ -23,7 +23,7 @@ import (
 func listPluginStoreForTest(t *testing.T, h *Handler) pluginStoreListResponse {
 	t.Helper()
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
+	c, _ := web.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodGet, "/v0/management/plugin-store", nil)
 	h.ListPluginStore(c)
 	if rec.Code != http.StatusOK {
@@ -394,8 +394,8 @@ func TestPluginStoreListingCooldownAlsoBlocksInstallation(t *testing.T) {
 	}
 	for _, query := range []string{"", "?version=0.2.0"} {
 		rec := httptest.NewRecorder()
-		c, _ := gin.CreateTestContext(rec)
-		c.Params = gin.Params{{Key: "id", Value: "sample-provider"}}
+		c, _ := web.CreateTestContext(rec)
+		c.Params = web.Params{{Key: "id", Value: "sample-provider"}}
 		c.Request = httptest.NewRequest(http.MethodPost, "/v0/management/plugin-store/sample-provider/install"+query, nil)
 		h.InstallPluginFromStore(c)
 		if rec.Code != http.StatusTooManyRequests || !strings.Contains(rec.Body.String(), "plugin_store_rate_limited") || !strings.Contains(rec.Body.String(), "retry_at") {
@@ -425,8 +425,8 @@ func TestPluginStoreInstallationPropagatesRegistryRateLimit(t *testing.T) {
 	}
 	for _, query := range []string{"", "?source=official"} {
 		rec := httptest.NewRecorder()
-		c, _ := gin.CreateTestContext(rec)
-		c.Params = gin.Params{{Key: "id", Value: "sample-provider"}}
+		c, _ := web.CreateTestContext(rec)
+		c.Params = web.Params{{Key: "id", Value: "sample-provider"}}
 		c.Request = httptest.NewRequest(http.MethodPost, "/v0/management/plugin-store/sample-provider/install"+query, nil)
 		h.InstallPluginFromStore(c)
 		if rec.Code != http.StatusTooManyRequests || rec.Header().Get("Retry-After") == "" {

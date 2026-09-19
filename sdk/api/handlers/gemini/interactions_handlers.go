@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	. "github.com/router-for-me/CLIProxyAPI/v7/internal/constant"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/interfaces"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/api/handlers"
@@ -90,7 +90,7 @@ func buildInteractionsExecutionRequest(target interactionsRequestTarget, modelNa
 }
 
 // Interactions handles POST /v1beta/interactions.
-func (h *GeminiAPIHandler) Interactions(c *gin.Context) {
+func (h *GeminiAPIHandler) Interactions(c *web.Context) {
 	rawJSON, errRead := c.GetRawData()
 	if errRead != nil {
 		c.JSON(http.StatusBadRequest, handlers.ErrorResponse{Error: handlers.ErrorDetail{Message: errRead.Error(), Type: "invalid_request_error"}})
@@ -117,7 +117,7 @@ func (h *GeminiAPIHandler) Interactions(c *gin.Context) {
 	h.handleInteractionsNonStream(c, cliCtx, cliCancel, req)
 }
 
-func (h *GeminiAPIHandler) handleInteractionsNonStream(c *gin.Context, cliCtx context.Context, cliCancel handlers.APIHandlerCancelFunc, req handlers.ProtocolExecutionRequest) {
+func (h *GeminiAPIHandler) handleInteractionsNonStream(c *web.Context, cliCtx context.Context, cliCancel handlers.APIHandlerCancelFunc, req handlers.ProtocolExecutionRequest) {
 	c.Header("Content-Type", "application/json")
 	stopKeepAlive := h.StartNonStreamingKeepAlive(c, cliCtx)
 	resp, errMsg := h.ExecuteProtocolWithAuthManager(cliCtx, req)
@@ -131,7 +131,7 @@ func (h *GeminiAPIHandler) handleInteractionsNonStream(c *gin.Context, cliCtx co
 	_, _ = c.Writer.Write(resp.Body)
 }
 
-func (h *GeminiAPIHandler) handleInteractionsStream(c *gin.Context, cliCtx context.Context, cliCancel handlers.APIHandlerCancelFunc, req handlers.ProtocolExecutionRequest) {
+func (h *GeminiAPIHandler) handleInteractionsStream(c *web.Context, cliCtx context.Context, cliCancel handlers.APIHandlerCancelFunc, req handlers.ProtocolExecutionRequest) {
 	flusher, ok := c.Writer.(http.Flusher)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, handlers.ErrorResponse{Error: handlers.ErrorDetail{Message: "Streaming not supported", Type: "server_error"}})
@@ -166,7 +166,7 @@ func (h *GeminiAPIHandler) handleInteractionsStream(c *gin.Context, cliCtx conte
 	h.forwardInteractionsStream(c, flusher, func(err error) { cliCancel(err) }, data, errs)
 }
 
-func (h *GeminiAPIHandler) forwardInteractionsStream(c *gin.Context, flusher http.Flusher, cancel func(error), data <-chan []byte, errs <-chan *interfaces.ErrorMessage) {
+func (h *GeminiAPIHandler) forwardInteractionsStream(c *web.Context, flusher http.Flusher, cancel func(error), data <-chan []byte, errs <-chan *interfaces.ErrorMessage) {
 	h.ForwardStream(c, flusher, cancel, data, errs, handlers.StreamForwardOptions{
 		WriteChunk: func(chunk []byte) {
 			if len(chunk) == 0 {

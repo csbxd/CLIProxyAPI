@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 )
 
@@ -25,7 +25,7 @@ func TestDownloadAuthFile_ReturnsFile(t *testing.T) {
 	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: authDir}, nil)
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodGet, "/v0/management/auth-files/download?name="+url.QueryEscape(fileName), nil)
 	h.DownloadAuthFile(ctx)
 
@@ -49,7 +49,7 @@ func TestDownloadAuthFile_RejectsPathSeparators(t *testing.T) {
 		`nested\\secret.json`,
 	} {
 		rec := httptest.NewRecorder()
-		ctx, _ := gin.CreateTestContext(rec)
+		ctx, _ := web.CreateTestContext(rec)
 		ctx.Request = httptest.NewRequest(http.MethodGet, "/v0/management/auth-files/download?name="+url.QueryEscape(name), nil)
 		h.DownloadAuthFile(ctx)
 

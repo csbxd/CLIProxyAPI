@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	codexlive "github.com/router-for-me/CLIProxyAPI/v7/internal/client/codex/live"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/home"
@@ -37,8 +37,8 @@ const (
 	exampleAPIKeyManagementURL  = "/management.html?safe-mode=configure"
 )
 
-func (s *Server) homeHeartbeatMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
+func (s *Server) homeHeartbeatMiddleware() web.HandlerFunc {
+	return func(c *web.Context) {
 		if s == nil || s.cfg == nil || !s.cfg.Home.Enabled {
 			c.Next()
 			return
@@ -63,8 +63,8 @@ func (s *Server) exampleAPIKeySafeModeRequired(cfg *config.Config) bool {
 	return s != nil && s.exampleAPIKeySafeModeEnabled && cfg != nil && safemode.HasExampleAPIKeys(cfg.APIKeys)
 }
 
-func (s *Server) exampleAPIKeySafeModeMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
+func (s *Server) exampleAPIKeySafeModeMiddleware() web.HandlerFunc {
+	return func(c *web.Context) {
 		if s == nil || !s.exampleAPIKeySafeModeActive.Load() || c == nil || c.Request == nil || c.Request.URL == nil {
 			c.Next()
 			return
@@ -85,14 +85,14 @@ func (s *Server) exampleAPIKeySafeModeMiddleware() gin.HandlerFunc {
 		}
 
 		c.Header("X-CPA-SAFE-MODE", "example-api-key")
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+		c.AbortWithStatusJSON(http.StatusForbidden, web.H{
 			"error":   "unsafe_example_api_key",
 			"message": "Proxy API endpoints are disabled because api-keys contains template values. Open /management.html?safe-mode=configure, update api-keys in Management, then retry.",
 		})
 	}
 }
 
-func (s *Server) serveExampleAPIKeyWarningPage(c *gin.Context) {
+func (s *Server) serveExampleAPIKeyWarningPage(c *web.Context) {
 	cfg := s.cfg
 	var keys []string
 	if cfg != nil {
@@ -128,9 +128,9 @@ func isExampleAPIKeySafeModeProxyPath(path string) bool {
 // to every response, allowing cross-origin requests.
 //
 // Returns:
-//   - gin.HandlerFunc: The CORS middleware handler
-func corsMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
+//   - web.HandlerFunc: The CORS middleware handler
+func corsMiddleware() web.HandlerFunc {
+	return func(c *web.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "*")
@@ -148,16 +148,16 @@ func corsMiddleware() gin.HandlerFunc {
 // AuthMiddleware returns a Gin middleware handler that authenticates requests
 // using the configured authentication providers. When no providers are available,
 // it allows all requests (legacy behaviour).
-func AuthMiddleware(manager *sdkaccess.Manager) gin.HandlerFunc {
+func AuthMiddleware(manager *sdkaccess.Manager) web.HandlerFunc {
 	return accessAuthMiddleware(manager, false)
 }
 
-func realtimeStandardAuthMiddleware(manager *sdkaccess.Manager) gin.HandlerFunc {
+func realtimeStandardAuthMiddleware(manager *sdkaccess.Manager) web.HandlerFunc {
 	return accessAuthMiddleware(manager, true)
 }
 
-func accessAuthMiddleware(manager *sdkaccess.Manager, realtimeError bool) gin.HandlerFunc {
-	return func(c *gin.Context) {
+func accessAuthMiddleware(manager *sdkaccess.Manager, realtimeError bool) web.HandlerFunc {
+	return func(c *web.Context) {
 		if manager == nil {
 			c.Next()
 			return
@@ -187,7 +187,7 @@ func accessAuthMiddleware(manager *sdkaccess.Manager, realtimeError bool) gin.Ha
 				errorType = "server_error"
 				code = "authentication_service_error"
 			}
-			c.AbortWithStatusJSON(statusCode, gin.H{"error": gin.H{
+			c.AbortWithStatusJSON(statusCode, web.H{"error": web.H{
 				"message": err.Message,
 				"type":    errorType,
 				"param":   nil,
@@ -195,20 +195,20 @@ func accessAuthMiddleware(manager *sdkaccess.Manager, realtimeError bool) gin.Ha
 			}})
 			return
 		}
-		c.AbortWithStatusJSON(statusCode, gin.H{"error": err.Message})
+		c.AbortWithStatusJSON(statusCode, web.H{"error": err.Message})
 	}
 }
 
-func realtimeAuthMiddleware(manager *sdkaccess.Manager, handler *codexlive.Handler) gin.HandlerFunc {
+func realtimeAuthMiddleware(manager *sdkaccess.Manager, handler *codexlive.Handler) web.HandlerFunc {
 	fallback := realtimeStandardAuthMiddleware(manager)
-	return func(c *gin.Context) {
+	return func(c *web.Context) {
 		authorization, matched, errAuthenticate := handler.AuthenticateClientSecret(c.Request)
 		if !matched {
 			fallback(c)
 			return
 		}
 		if errAuthenticate != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": gin.H{
+			c.AbortWithStatusJSON(http.StatusUnauthorized, web.H{"error": web.H{
 				"message": errAuthenticate.Error(),
 				"type":    "invalid_request_error",
 				"param":   nil,

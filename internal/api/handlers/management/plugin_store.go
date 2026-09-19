@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/htmlsanitize"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/pluginhost"
@@ -116,27 +116,27 @@ type sourcedPlugin struct {
 	plugin pluginstore.Plugin
 }
 
-func (h *Handler) ListPluginStore(c *gin.Context) {
+func (h *Handler) ListPluginStore(c *web.Context) {
 	pluginsEnabled, pluginsDir, proxyURL, sourceConfigs, storeAuth, configs, host := h.pluginStoreSnapshot()
 	resolvedPluginsDir, errResolvePluginsDir := config.ResolvePluginsDir(pluginsDir)
 	if errResolvePluginsDir != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "plugin_directory_invalid", "message": errResolvePluginsDir.Error()})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "plugin_directory_invalid", "message": errResolvePluginsDir.Error()})
 		return
 	}
 	pluginsDir = resolvedPluginsDir
 	sources, errSources := h.pluginStoreSources(sourceConfigs)
 	if errSources != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "plugin_store_source_invalid", "message": errSources.Error()})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "plugin_store_source_invalid", "message": errSources.Error()})
 		return
 	}
 	plugins, sourceErrors := h.fetchSourcedPlugins(c.Request.Context(), proxyURL, storeAuth, sources)
 	if len(plugins) == 0 && len(sourceErrors) > 0 {
-		c.JSON(http.StatusBadGateway, gin.H{"error": "plugin_store_registry_failed", "message": sourceErrors[0].Message})
+		c.JSON(http.StatusBadGateway, web.H{"error": "plugin_store_registry_failed", "message": sourceErrors[0].Message})
 		return
 	}
 	statuses, errStatus := pluginLocalStatuses(pluginsEnabled, pluginsDir, configs, host)
 	if errStatus != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "plugin_discovery_failed", "message": errStatus.Error()})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "plugin_discovery_failed", "message": errStatus.Error()})
 		return
 	}
 
@@ -217,31 +217,31 @@ func (h *Handler) ListPluginStore(c *gin.Context) {
 	})
 }
 
-func (h *Handler) InstallPluginFromStore(c *gin.Context) {
+func (h *Handler) InstallPluginFromStore(c *web.Context) {
 	h.installPluginFromStore(c, runtime.GOOS, runtime.GOARCH)
 }
 
-func (h *Handler) installPluginFromStore(c *gin.Context, goos, goarch string) {
+func (h *Handler) installPluginFromStore(c *web.Context, goos, goarch string) {
 	id, okID := pluginIDFromRequest(c)
 	if !okID {
 		return
 	}
 	requestedVersion, errVersionRequest := pluginInstallRequestedVersion(c)
 	if errVersionRequest != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request", "message": errVersionRequest.Error()})
+		c.JSON(http.StatusBadRequest, web.H{"error": "invalid_request", "message": errVersionRequest.Error()})
 		return
 	}
 	installCtx := c.Request.Context()
 	pluginsEnabled, pluginsDir, proxyURL, sourceConfigs, storeAuth, configs, host := h.pluginStoreSnapshot()
 	resolvedPluginsDir, errResolvePluginsDir := config.ResolvePluginsDir(pluginsDir)
 	if errResolvePluginsDir != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "plugin_directory_invalid", "message": errResolvePluginsDir.Error()})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "plugin_directory_invalid", "message": errResolvePluginsDir.Error()})
 		return
 	}
 	pluginsDir = resolvedPluginsDir
 	sources, errSources := h.pluginStoreSources(sourceConfigs)
 	if errSources != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "plugin_store_source_invalid", "message": errSources.Error()})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "plugin_store_source_invalid", "message": errSources.Error()})
 		return
 	}
 	source, plugin, client, okPlugin := h.findPluginStoreInstallTarget(installCtx, proxyURL, storeAuth, sources, id, c.Query("source"), c)
@@ -266,14 +266,14 @@ func (h *Handler) installPluginFromStore(c *gin.Context, goos, goarch string) {
 		var errManifest error
 		manifest, errManifest = pluginStoreDirectManifest(source, plugin, requestedVersion)
 		if errManifest != nil {
-			c.JSON(http.StatusBadGateway, gin.H{"error": "plugin_manifest_invalid", "message": errManifest.Error()})
+			c.JSON(http.StatusBadGateway, web.H{"error": "plugin_manifest_invalid", "message": errManifest.Error()})
 			return
 		}
 		result, errInstall = client.InstallManifest(installCtx, manifest, installOptions)
 	case pluginstore.InstallTypeGitHubRelease:
 		result, errInstall = installPluginStoreGitHubRelease(installCtx, client, plugin, requestedVersion, installOptions)
 	default:
-		c.JSON(http.StatusBadGateway, gin.H{"error": "plugin_manifest_invalid", "message": fmt.Sprintf("unsupported install type %q", plugin.Install.Type)})
+		c.JSON(http.StatusBadGateway, web.H{"error": "plugin_manifest_invalid", "message": fmt.Sprintf("unsupported install type %q", plugin.Install.Type)})
 		return
 	}
 	if errInstall != nil {
@@ -281,21 +281,21 @@ func (h *Handler) installPluginFromStore(c *gin.Context, goos, goarch string) {
 			return
 		}
 		if errors.Is(errInstall, pluginstore.ErrLoadedPluginLocked) {
-			c.JSON(http.StatusConflict, gin.H{
+			c.JSON(http.StatusConflict, web.H{
 				"error":            "plugin_update_requires_restart",
 				"message":          "loaded plugin cannot be overwritten while the server is running",
 				"restart_required": true,
 			})
 			return
 		}
-		c.JSON(http.StatusBadGateway, gin.H{"error": "plugin_install_failed", "message": errInstall.Error()})
+		c.JSON(http.StatusBadGateway, web.H{"error": "plugin_install_failed", "message": errInstall.Error()})
 		return
 	}
 	if manifest.ID == "" {
 		var errManifest error
 		manifest, errManifest = pluginStoreManifestForInstall(source, plugin, result)
 		if errManifest != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
+			c.JSON(http.StatusInternalServerError, web.H{
 				"error":   "plugin_manifest_failed",
 				"message": fmt.Sprintf("plugin file installed at %s but creating store manifest failed: %s", result.Path, errManifest.Error()),
 				"path":    result.Path,
@@ -308,7 +308,7 @@ func (h *Handler) installPluginFromStore(c *gin.Context, goos, goarch string) {
 	h.mu.Lock()
 	if h.cfg == nil {
 		h.mu.Unlock()
-		c.JSON(http.StatusInternalServerError, gin.H{
+		c.JSON(http.StatusInternalServerError, web.H{
 			"error":   "config_unavailable",
 			"message": fmt.Sprintf("plugin file installed at %s but config is unavailable to enable it", result.Path),
 			"path":    result.Path,
@@ -317,7 +317,7 @@ func (h *Handler) installPluginFromStore(c *gin.Context, goos, goarch string) {
 	}
 	if errEnable := h.enablePluginConfigLocked(id, manifest); errEnable != nil {
 		h.mu.Unlock()
-		c.JSON(http.StatusInternalServerError, gin.H{
+		c.JSON(http.StatusInternalServerError, web.H{
 			"error":   "config_update_failed",
 			"message": fmt.Sprintf("plugin file installed at %s but enabling it in config failed: %s", result.Path, errEnable.Error()),
 			"path":    result.Path,
@@ -326,7 +326,7 @@ func (h *Handler) installPluginFromStore(c *gin.Context, goos, goarch string) {
 	}
 	if errSave := config.SaveConfigPreserveComments(h.configFilePath, h.cfg); errSave != nil {
 		h.mu.Unlock()
-		c.JSON(http.StatusInternalServerError, gin.H{
+		c.JSON(http.StatusInternalServerError, web.H{
 			"error":   "config_save_failed",
 			"message": fmt.Sprintf("plugin file installed at %s but saving config failed: %s", result.Path, errSave.Error()),
 			"path":    result.Path,
@@ -405,14 +405,14 @@ func installPluginStoreGitHubRelease(ctx context.Context, client pluginstore.Cli
 	return pluginstore.InstallResult{}, fmt.Errorf("install release by tag: %w", errors.Join(errs...))
 }
 
-func writePluginStoreRateLimit(c *gin.Context, err error) bool {
+func writePluginStoreRateLimit(c *web.Context, err error) bool {
 	var rateLimit *pluginstore.RateLimitError
 	if !errors.As(err, &rateLimit) {
 		return false
 	}
 	retryAfter := rateLimit.RetryAfterSeconds(time.Now())
 	c.Header("Retry-After", strconv.FormatInt(retryAfter, 10))
-	c.JSON(http.StatusTooManyRequests, gin.H{
+	c.JSON(http.StatusTooManyRequests, web.H{
 		"error":       "plugin_store_rate_limited",
 		"message":     rateLimit.Error(),
 		"retry_after": retryAfter,
@@ -442,7 +442,7 @@ func pluginStoreManifestForInstall(source pluginstore.Source, plugin pluginstore
 	}
 }
 
-func pluginInstallRequestedVersion(c *gin.Context) (string, error) {
+func pluginInstallRequestedVersion(c *web.Context) (string, error) {
 	requestedVersion := strings.TrimSpace(c.Query("version"))
 	if c == nil || c.Request == nil || c.Request.Body == nil || c.Request.Body == http.NoBody {
 		return requestedVersion, nil
@@ -588,7 +588,7 @@ func (h *Handler) fetchSourcedPlugins(ctx context.Context, proxyURL string, stor
 	return plugins, sourceErrors
 }
 
-func (h *Handler) findPluginStoreInstallTarget(ctx context.Context, proxyURL string, storeAuth []pluginstore.AuthConfig, sources []pluginstore.Source, id string, requestedSourceID string, c *gin.Context) (pluginstore.Source, pluginstore.Plugin, pluginstore.Client, bool) {
+func (h *Handler) findPluginStoreInstallTarget(ctx context.Context, proxyURL string, storeAuth []pluginstore.AuthConfig, sources []pluginstore.Source, id string, requestedSourceID string, c *web.Context) (pluginstore.Source, pluginstore.Plugin, pluginstore.Client, bool) {
 	requestedSourceID = strings.TrimSpace(requestedSourceID)
 	if requestedSourceID != "" {
 		for _, source := range sources {
@@ -601,17 +601,17 @@ func (h *Handler) findPluginStoreInstallTarget(ctx context.Context, proxyURL str
 				if writePluginStoreRateLimit(c, errRegistry) {
 					return pluginstore.Source{}, pluginstore.Plugin{}, pluginstore.Client{}, false
 				}
-				c.JSON(http.StatusBadGateway, gin.H{"error": "plugin_store_registry_failed", "message": errRegistry.Error()})
+				c.JSON(http.StatusBadGateway, web.H{"error": "plugin_store_registry_failed", "message": errRegistry.Error()})
 				return pluginstore.Source{}, pluginstore.Plugin{}, pluginstore.Client{}, false
 			}
 			plugin, okPlugin := registry.PluginByID(id)
 			if !okPlugin {
-				c.JSON(http.StatusNotFound, gin.H{"error": "plugin_not_found", "message": "plugin not found in registry source"})
+				c.JSON(http.StatusNotFound, web.H{"error": "plugin_not_found", "message": "plugin not found in registry source"})
 				return pluginstore.Source{}, pluginstore.Plugin{}, pluginstore.Client{}, false
 			}
 			return source, plugin, client, true
 		}
-		c.JSON(http.StatusNotFound, gin.H{"error": "plugin_store_source_not_found", "message": "plugin store source not found"})
+		c.JSON(http.StatusNotFound, web.H{"error": "plugin_store_source_not_found", "message": "plugin store source not found"})
 		return pluginstore.Source{}, pluginstore.Plugin{}, pluginstore.Client{}, false
 	}
 
@@ -627,14 +627,14 @@ func (h *Handler) findPluginStoreInstallTarget(ctx context.Context, proxyURL str
 			if writePluginStoreRateLimit(c, sourceErrors[0].cause) {
 				return pluginstore.Source{}, pluginstore.Plugin{}, pluginstore.Client{}, false
 			}
-			c.JSON(http.StatusBadGateway, gin.H{"error": "plugin_store_registry_failed", "message": sourceErrors[0].Message})
+			c.JSON(http.StatusBadGateway, web.H{"error": "plugin_store_registry_failed", "message": sourceErrors[0].Message})
 			return pluginstore.Source{}, pluginstore.Plugin{}, pluginstore.Client{}, false
 		}
-		c.JSON(http.StatusNotFound, gin.H{"error": "plugin_not_found", "message": "plugin not found in registry"})
+		c.JSON(http.StatusNotFound, web.H{"error": "plugin_not_found", "message": "plugin not found in registry"})
 		return pluginstore.Source{}, pluginstore.Plugin{}, pluginstore.Client{}, false
 	}
 	if len(matches) > 1 {
-		c.JSON(http.StatusConflict, gin.H{
+		c.JSON(http.StatusConflict, web.H{
 			"error":   "plugin_store_source_required",
 			"message": "multiple plugin store sources contain this plugin id; specify source",
 			"sources": sanitizePluginStoreSources(sourcedPluginSources(matches)),
@@ -795,7 +795,7 @@ func pluginStoreInstallSourceStatus(status pluginLocalStatus, sources []pluginst
 	return "", "assumed", true
 }
 
-func validatePluginStoreInstallSource(c *gin.Context, configs map[string]config.PluginInstanceConfig, sources []pluginstore.Source, id string, requestedSourceID string) bool {
+func validatePluginStoreInstallSource(c *web.Context, configs map[string]config.PluginInstanceConfig, sources []pluginstore.Source, id string, requestedSourceID string) bool {
 	item, configured := configs[id]
 	if !configured {
 		return true
@@ -811,7 +811,7 @@ func validatePluginStoreInstallSource(c *gin.Context, configs map[string]config.
 	}
 	resolvedSourceID, known := pluginStoreResolveInstalledSource(status, sources)
 	if !known {
-		c.JSON(http.StatusConflict, gin.H{
+		c.JSON(http.StatusConflict, web.H{
 			"error":               "plugin_store_installed_source_unknown",
 			"message":             "installed plugin source cannot be verified; uninstall it before reinstalling from the store",
 			"requested_source_id": strings.TrimSpace(requestedSourceID),
@@ -819,7 +819,7 @@ func validatePluginStoreInstallSource(c *gin.Context, configs map[string]config.
 		return false
 	}
 	if resolvedSourceID != strings.TrimSpace(requestedSourceID) {
-		c.JSON(http.StatusConflict, gin.H{
+		c.JSON(http.StatusConflict, web.H{
 			"error":               "plugin_store_source_conflict",
 			"message":             "installed plugin belongs to a different store source; uninstall it before switching sources",
 			"installed_source_id": resolvedSourceID,

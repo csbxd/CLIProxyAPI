@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	internalconfig "github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/interfaces"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
@@ -22,11 +22,11 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-func performImagesEndpointRequest(t *testing.T, endpointPath string, contentType string, body io.Reader, handler gin.HandlerFunc) *httptest.ResponseRecorder {
+func performImagesEndpointRequest(t *testing.T, endpointPath string, contentType string, body io.Reader, handler web.HandlerFunc) *httptest.ResponseRecorder {
 	t.Helper()
 
-	gin.SetMode(gin.TestMode)
-	router := gin.New()
+	web.SetMode(web.TestMode)
+	router := web.New()
 	router.POST(endpointPath, handler)
 
 	req := httptest.NewRequest(http.MethodPost, endpointPath, body)
@@ -457,9 +457,9 @@ func TestSSEFrameAccumulatorFlushesDataOnlyFrame(t *testing.T) {
 }
 
 func TestWriteImagesStreamErrorEventSanitizesPayload(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 	raw := `{"error":{"code":"upstream_failed","message":"token=image-secret"},"debug":"` + strings.Repeat("x", 8192) + `"}`
 	writeImagesStreamErrorEvent(c, &interfaces.ErrorMessage{StatusCode: http.StatusBadGateway, Error: errors.New(raw)})
 
@@ -487,10 +487,10 @@ func TestCollectImagesRejectsPayloadErrorBeforeCompleted(t *testing.T) {
 }
 
 func TestForwardImagesStreamCancelsWithPayloadError(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	h := NewOpenAIAPIHandler(handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, nil))
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 	c.Request = httptest.NewRequest(http.MethodPost, "/v1/images/generations", nil)
 	flusher, ok := c.Writer.(http.Flusher)
 	if !ok {
@@ -513,11 +513,11 @@ func TestForwardImagesStreamCancelsWithPayloadError(t *testing.T) {
 }
 
 func TestForwardRawImageStreamPrefersPendingErrorOnClose(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	h := NewOpenAIAPIHandler(handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, nil))
 	for i := 0; i < 100; i++ {
 		recorder := httptest.NewRecorder()
-		c, _ := gin.CreateTestContext(recorder)
+		c, _ := web.CreateTestContext(recorder)
 		c.Request = httptest.NewRequest(http.MethodPost, "/v1/images/generations", nil)
 		data := make(chan []byte)
 		close(data)

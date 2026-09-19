@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/andybalholm/brotli"
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/klauspost/compress/zstd"
 	claudeauth "github.com/router-for-me/CLIProxyAPI/v7/internal/auth/claude"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
@@ -50,9 +50,9 @@ func malformedClaudeTreeSignatureForClaudeExecutorTest() string {
 func newClaudeHeaderTestRequest(t *testing.T, incoming http.Header) *http.Request {
 	t.Helper()
 
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	ginCtx, _ := gin.CreateTestContext(recorder)
+	ginCtx, _ := web.CreateTestContext(recorder)
 	ginReq := httptest.NewRequest(http.MethodPost, "http://localhost/v1/messages", nil)
 	ginReq.Header = incoming.Clone()
 	ginCtx.Request = ginReq
@@ -7495,8 +7495,8 @@ func TestResolveClaudeMCPAliasOptions(t *testing.T) {
 		t.Fatal("default caller alias secret is empty")
 	}
 
-	gin.SetMode(gin.TestMode)
-	ginCtx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	web.SetMode(web.TestMode)
+	ginCtx, _ := web.CreateTestContext(httptest.NewRecorder())
 	ginCtx.Set("userApiKey", "downstream-caller-one")
 	callerCtx := context.WithValue(context.Background(), "gin", ginCtx)
 	firstSecret := resolveClaudeMCPAliasOptions(callerCtx).secret
@@ -7504,7 +7504,7 @@ func TestResolveClaudeMCPAliasOptions(t *testing.T) {
 	if firstSecret == "" || secondSecret != firstSecret {
 		t.Fatalf("caller alias secret is unstable: %q != %q", firstSecret, secondSecret)
 	}
-	otherGinCtx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	otherGinCtx, _ := web.CreateTestContext(httptest.NewRecorder())
 	otherGinCtx.Set("userApiKey", "downstream-caller-two")
 	otherCtx := context.WithValue(context.Background(), "gin", otherGinCtx)
 	if otherSecret := resolveClaudeMCPAliasOptions(otherCtx).secret; otherSecret == firstSecret {

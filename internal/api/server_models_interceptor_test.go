@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/pluginapi"
 )
 
@@ -300,10 +300,10 @@ func TestServer_WriteModelListResponse_ExposesToInterceptors(t *testing.T) {
 	})
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
+	c, _ := web.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodGet, "/v1/models", nil)
 
-	payload := gin.H{"models": []string{"original"}}
+	payload := web.H{"models": []string{"original"}}
 	server.writeModelListResponse(c, "gemini", payload)
 
 	if !intercepted {

@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/google/uuid"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/interfaces"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
@@ -603,7 +603,7 @@ func (h *BaseAPIHandler) applyResponseInterceptors(ctx context.Context, requestI
 
 // WriteModelListResponse serializes the model-list payload, applies plugin response interceptors
 // if a plugin host is configured, and writes the resulting headers and body to the Gin context.
-func (h *BaseAPIHandler) WriteModelListResponse(c *gin.Context, sourceFormat string, payload any) {
+func (h *BaseAPIHandler) WriteModelListResponse(c *web.Context, sourceFormat string, payload any) {
 	if c == nil {
 		return
 	}
@@ -615,7 +615,7 @@ func (h *BaseAPIHandler) WriteModelListResponse(c *gin.Context, sourceFormat str
 		var errMarshal error
 		body, errMarshal = json.Marshal(payload)
 		if errMarshal != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": errMarshal.Error()})
+			c.JSON(http.StatusInternalServerError, web.H{"error": errMarshal.Error()})
 			return
 		}
 	}

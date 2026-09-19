@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/home"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
@@ -161,7 +161,7 @@ func codexMultiAgentV2ToolsPrepared(ctx context.Context) bool {
 	if ctx == nil {
 		return false
 	}
-	ginCtx, ok := ctx.Value("gin").(*gin.Context)
+	ginCtx, ok := ctx.Value("gin").(*web.Context)
 	if !ok || ginCtx == nil {
 		return false
 	}
@@ -172,7 +172,7 @@ func codexMultiAgentV2ToolsPrepared(ctx context.Context) bool {
 
 func codexClientUserAgent(ctx context.Context, headers http.Header) string {
 	if ctx != nil {
-		if ginCtx, ok := ctx.Value("gin").(*gin.Context); ok && ginCtx != nil && ginCtx.Request != nil {
+		if ginCtx, ok := ctx.Value("gin").(*web.Context); ok && ginCtx != nil && ginCtx.Request != nil {
 			return headerValueCaseInsensitive(ginCtx.Request.Header, "User-Agent")
 		}
 	}
@@ -346,7 +346,7 @@ func codexHomeAvailableModels(ctx context.Context, headers http.Header) []map[st
 		ctx = context.Background()
 	}
 	requestHeaders := headers
-	if ginCtx, ok := ctx.Value("gin").(*gin.Context); ok && ginCtx != nil && ginCtx.Request != nil {
+	if ginCtx, ok := ctx.Value("gin").(*web.Context); ok && ginCtx != nil && ginCtx.Request != nil {
 		requestHeaders = ginCtx.Request.Header
 	}
 	query := make(url.Values)

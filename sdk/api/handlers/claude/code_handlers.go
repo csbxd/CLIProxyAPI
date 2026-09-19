@@ -17,7 +17,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	claudemodels "github.com/router-for-me/CLIProxyAPI/v7/internal/client/claude/models"
 	. "github.com/router-for-me/CLIProxyAPI/v7/internal/constant"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/interfaces"
@@ -67,7 +67,7 @@ func (h *ClaudeCodeAPIHandler) Models() []map[string]any {
 //
 // Parameters:
 //   - c: The Gin context for the request.
-func (h *ClaudeCodeAPIHandler) ClaudeMessages(c *gin.Context) {
+func (h *ClaudeCodeAPIHandler) ClaudeMessages(c *web.Context) {
 	// Extract raw JSON data from the incoming request
 	rawJSON, err := c.GetRawData()
 	// If data retrieval fails, return a 400 Bad Request error.
@@ -99,7 +99,7 @@ func (h *ClaudeCodeAPIHandler) ClaudeMessages(c *gin.Context) {
 //
 // Parameters:
 //   - c: The Gin context for the request.
-func (h *ClaudeCodeAPIHandler) ClaudeCountTokens(c *gin.Context) {
+func (h *ClaudeCodeAPIHandler) ClaudeCountTokens(c *web.Context) {
 	// Extract raw JSON data from the incoming request
 	rawJSON, err := c.GetRawData()
 	// If data retrieval fails, return a 400 Bad Request error.
@@ -154,7 +154,7 @@ func rewriteClaudeDDModelInBody(rawJSON []byte) []byte {
 //
 // Parameters:
 //   - c: The Gin context for the request.
-func (h *ClaudeCodeAPIHandler) ClaudeModels(c *gin.Context) {
+func (h *ClaudeCodeAPIHandler) ClaudeModels(c *web.Context) {
 	disableCloaking := h.Cfg != nil && h.Cfg.ClaudeCode.DisableCloakingModelList
 	h.WriteModelListResponse(c, h.HandlerType(), claudemodels.BuildResponse(h.Models(), disableCloaking))
 }
@@ -168,7 +168,7 @@ func (h *ClaudeCodeAPIHandler) ClaudeModels(c *gin.Context) {
 //   - c: The Gin context for the request
 //   - modelName: The name of the Gemini model to use for content generation
 //   - rawJSON: The raw JSON request body containing generation parameters and content
-func (h *ClaudeCodeAPIHandler) handleNonStreamingResponse(c *gin.Context, rawJSON []byte) {
+func (h *ClaudeCodeAPIHandler) handleNonStreamingResponse(c *web.Context, rawJSON []byte) {
 	c.Header("Content-Type", "application/json")
 	alt := h.GetAlt(c)
 	cliCtx, cliCancel := h.GetContextWithCancel(h, c, context.Background())
@@ -217,7 +217,7 @@ func (h *ClaudeCodeAPIHandler) handleNonStreamingResponse(c *gin.Context, rawJSO
 // Parameters:
 //   - c: The Gin context for the request.
 //   - rawJSON: The raw JSON request body.
-func (h *ClaudeCodeAPIHandler) handleStreamingResponse(c *gin.Context, rawJSON []byte) {
+func (h *ClaudeCodeAPIHandler) handleStreamingResponse(c *web.Context, rawJSON []byte) {
 	// Get the http.Flusher interface to manually flush the response.
 	// This is crucial for streaming as it allows immediate sending of data chunks
 	flusher, ok := c.Writer.(http.Flusher)
@@ -301,7 +301,7 @@ func (h *ClaudeCodeAPIHandler) handleStreamingResponse(c *gin.Context, rawJSON [
 	}
 }
 
-func (h *ClaudeCodeAPIHandler) forwardClaudeStream(c *gin.Context, flusher http.Flusher, cancel func(error), data <-chan []byte, errs <-chan *interfaces.ErrorMessage) {
+func (h *ClaudeCodeAPIHandler) forwardClaudeStream(c *web.Context, flusher http.Flusher, cancel func(error), data <-chan []byte, errs <-chan *interfaces.ErrorMessage) {
 	h.ForwardStream(c, flusher, cancel, data, errs, handlers.StreamForwardOptions{
 		WriteChunk: func(chunk []byte) {
 			if len(chunk) == 0 {
@@ -359,7 +359,7 @@ func (h *ClaudeCodeAPIHandler) toClaudeError(msg *interfaces.ErrorMessage) claud
 	}
 }
 
-func (h *ClaudeCodeAPIHandler) WriteErrorResponse(c *gin.Context, msg *interfaces.ErrorMessage) {
+func (h *ClaudeCodeAPIHandler) WriteErrorResponse(c *web.Context, msg *interfaces.ErrorMessage) {
 	status := http.StatusInternalServerError
 	if msg != nil && msg.StatusCode > 0 {
 		status = msg.StatusCode
@@ -471,7 +471,7 @@ func claudeErrorTypeFromStatus(status int) string {
 	}
 }
 
-func appendClaudeAPIResponse(c *gin.Context, data []byte) {
+func appendClaudeAPIResponse(c *web.Context, data []byte) {
 	if c == nil || len(data) == 0 {
 		return
 	}

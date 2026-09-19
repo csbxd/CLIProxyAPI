@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/tidwall/gjson"
 )
 
@@ -42,7 +42,7 @@ func IsGrokClientHeaders(headers http.Header) bool {
 // IsGrokClientContext checks if either the context (e.g. Gin context) or headers indicate a Grok client.
 func IsGrokClientContext(ctx context.Context, headers http.Header) bool {
 	if ctx != nil {
-		if ginCtx, ok := ctx.Value("gin").(*gin.Context); ok && ginCtx != nil && ginCtx.Request != nil {
+		if ginCtx, ok := ctx.Value("gin").(*web.Context); ok && ginCtx != nil && ginCtx.Request != nil {
 			if IsGrokClientHeaders(ginCtx.Request.Header) {
 				return true
 			}

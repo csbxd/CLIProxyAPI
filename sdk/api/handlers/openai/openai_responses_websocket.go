@@ -12,7 +12,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/interfaces"
@@ -265,7 +265,7 @@ func truncateWebsocketCloseReason(reason string, maxBytes int) string {
 // ResponsesWebsocket handles websocket requests for /v1/responses.
 // It accepts `response.create` and `response.append` requests and streams
 // response events back as JSON websocket text messages.
-func (h *OpenAIResponsesAPIHandler) ResponsesWebsocket(c *gin.Context) {
+func (h *OpenAIResponsesAPIHandler) ResponsesWebsocket(c *web.Context) {
 	conn, err := responsesWebsocketUpgrader.Upgrade(c.Writer, c.Request, websocketUpgradeHeaders(c.Request))
 	if err != nil {
 		return
@@ -864,7 +864,7 @@ func responsesWebsocketNativePassthroughAllowed(upstreamMode string, useUpstream
 		strings.TrimSpace(pinnedAuthID) != "" && strings.TrimSpace(pinnedAuthID) == strings.TrimSpace(upstreamAuthID)
 }
 
-func websocketClientAddress(c *gin.Context) string {
+func websocketClientAddress(c *web.Context) string {
 	if c == nil || c.Request == nil {
 		return ""
 	}

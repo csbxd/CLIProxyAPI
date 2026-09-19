@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/gorilla/websocket"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
@@ -21,10 +21,10 @@ import (
 )
 
 func TestHandleDirectWebsocketRejectsClientSecretModelMismatch(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	handler := NewHandler(auth.NewManager(nil, nil, nil), nil)
-	router := gin.New()
-	router.GET("/v1/realtime", func(c *gin.Context) {
+	router := web.New()
+	router.GET("/v1/realtime", func(c *web.Context) {
 		c.Set(ClientSecretSessionContextKey, json.RawMessage(`{"type":"realtime","model":"gpt-live-1-codex"}`))
 		c.Set(ClientSecretPrincipalContextKey, "sess_123")
 		c.Next()
@@ -40,7 +40,7 @@ func TestHandleDirectWebsocketRejectsClientSecretModelMismatch(t *testing.T) {
 }
 
 func TestHandleDirectWebsocketForwardsUnauthorizedHomeHandshakeWithoutRefresh(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	for _, tc := range []struct {
 		name              string
 		upstreamBody      string
@@ -74,9 +74,9 @@ func TestHandleDirectWebsocketForwardsUnauthorizedHomeHandshakeWithoutRefresh(t 
 			manager.RegisterExecutor(executor)
 			handler := NewHandler(manager, runtimeConfig)
 			handler.sidebandAPIBaseURL = "ws" + strings.TrimPrefix(upstreamServer.URL, "http") + "/v1"
-			router := gin.New()
+			router := web.New()
 			timelineCapture := make(chan []byte, 1)
-			router.Use(func(c *gin.Context) {
+			router.Use(func(c *web.Context) {
 				c.Next()
 				if raw, exists := c.Get("API_WEBSOCKET_TIMELINE"); exists {
 					timeline, _ := raw.([]byte)
@@ -124,7 +124,7 @@ func TestHandleDirectWebsocketForwardsUnauthorizedHomeHandshakeWithoutRefresh(t 
 }
 
 func TestHandleDirectWebsocketAppliesClientSecretSession(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	upstreamUpdate := make(chan []byte, 1)
 	upstreamServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		upgrader := websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}
@@ -152,8 +152,8 @@ func TestHandleDirectWebsocketAppliesClientSecretSession(t *testing.T) {
 	})
 	handler := NewHandler(manager, nil)
 	handler.sidebandAPIBaseURL = "ws" + strings.TrimPrefix(upstreamServer.URL, "http") + "/v1"
-	router := gin.New()
-	router.GET("/v1/realtime", func(c *gin.Context) {
+	router := web.New()
+	router.GET("/v1/realtime", func(c *web.Context) {
 		c.Set(ClientSecretSessionContextKey, json.RawMessage(`{"type":"realtime","model":"gpt-live-1-codex","instructions":"help"}`))
 		c.Set(ClientSecretPrincipalContextKey, "sess_123")
 		c.Next()
@@ -190,7 +190,7 @@ func TestHandleDirectWebsocketAppliesClientSecretSession(t *testing.T) {
 }
 
 func TestHandleDirectWebsocketRelaysStandardRealtimeFrames(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	upstreamRequest := make(chan *http.Request, 1)
 	upstreamMessage := make(chan string, 1)
@@ -228,7 +228,7 @@ func TestHandleDirectWebsocketRelaysStandardRealtimeFrames(t *testing.T) {
 	handler := NewHandler(manager, nil)
 	handler.sidebandAPIBaseURL = "ws" + strings.TrimPrefix(upstreamServer.URL, "http") + "/v1"
 
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/realtime", handler.HandleRealtimeWebsocket)
 	downstreamServer := httptest.NewServer(router)
 	defer downstreamServer.Close()

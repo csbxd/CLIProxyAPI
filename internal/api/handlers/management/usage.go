@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/redisqueue"
 )
 
@@ -21,15 +21,15 @@ func (r usageQueueRecord) MarshalJSON() ([]byte, error) {
 }
 
 // GetUsageQueue pops queued usage records from the usage queue.
-func (h *Handler) GetUsageQueue(c *gin.Context) {
+func (h *Handler) GetUsageQueue(c *web.Context) {
 	if h == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "handler unavailable"})
+		c.JSON(http.StatusInternalServerError, web.H{"error": "handler unavailable"})
 		return
 	}
 
 	count, errCount := parseUsageQueueCount(c.Query("count"))
 	if errCount != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": errCount.Error()})
+		c.JSON(http.StatusBadRequest, web.H{"error": errCount.Error()})
 		return
 	}
 

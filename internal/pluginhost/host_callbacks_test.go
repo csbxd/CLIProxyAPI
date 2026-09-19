@@ -12,11 +12,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/clienterror"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/interfaces"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
+	web "github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/api/handlers"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/pluginabi"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/pluginapi"
@@ -74,8 +74,8 @@ func TestHostHTTPDoCallbackUsesHostHTTPClient(t *testing.T) {
 }
 
 func TestHostHTTPDoCallbackRestoresRegisteredRequestContext(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	ginCtx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	web.SetMode(web.TestMode)
+	ginCtx, _ := web.CreateTestContext(httptest.NewRecorder())
 	ctx := context.WithValue(context.Background(), "gin", ginCtx)
 
 	host := New()

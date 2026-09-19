@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	managementHandlers "github.com/router-for-me/CLIProxyAPI/v7/internal/api/handlers/management"
 	claudemodels "github.com/router-for-me/CLIProxyAPI/v7/internal/client/claude/models"
 	codexlive "github.com/router-for-me/CLIProxyAPI/v7/internal/client/codex/live"
@@ -40,13 +40,13 @@ const codexAlphaSearchSourceFormat = "codex-alpha-search"
 // setupRoutes configures the API routes for the server.
 // It defines the endpoints and associates them with their respective handlers.
 func (s *Server) setupRoutes() {
-	healthzHandler := func(c *gin.Context) {
+	healthzHandler := func(c *web.Context) {
 		if c.Request.Method == http.MethodHead {
 			c.Status(http.StatusOK)
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+		c.JSON(http.StatusOK, web.H{"status": "ok"})
 	}
 	s.engine.GET("/healthz", healthzHandler)
 	s.engine.HEAD("/healthz", healthzHandler)
@@ -128,8 +128,8 @@ func (s *Server) setupRoutes() {
 	}
 
 	// Root endpoint
-	s.engine.GET("/", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
+	s.engine.GET("/", func(c *web.Context) {
+		c.JSON(http.StatusOK, web.H{
 			"message": "CLI Proxy API Server",
 			"endpoints": []string{
 				"POST /v1/chat/completions",
@@ -142,7 +142,7 @@ func (s *Server) setupRoutes() {
 	// OAuth callback endpoints (reuse main server port)
 	// These endpoints receive provider redirects and persist
 	// the short-lived code/state for the waiting goroutine.
-	s.engine.GET("/anthropic/callback", func(c *gin.Context) {
+	s.engine.GET("/anthropic/callback", func(c *web.Context) {
 		code := c.Query("code")
 		state := c.Query("state")
 		errStr := c.Query("error")
@@ -156,7 +156,7 @@ func (s *Server) setupRoutes() {
 		c.String(http.StatusOK, oauthCallbackSuccessHTML)
 	})
 
-	s.engine.GET("/codex/callback", func(c *gin.Context) {
+	s.engine.GET("/codex/callback", func(c *web.Context) {
 		code := c.Query("code")
 		state := c.Query("state")
 		errStr := c.Query("error")
@@ -170,7 +170,7 @@ func (s *Server) setupRoutes() {
 		c.String(http.StatusOK, oauthCallbackSuccessHTML)
 	})
 
-	s.engine.GET("/antigravity/callback", func(c *gin.Context) {
+	s.engine.GET("/antigravity/callback", func(c *web.Context) {
 		code := c.Query("code")
 		state := c.Query("state")
 		errStr := c.Query("error")
@@ -184,7 +184,7 @@ func (s *Server) setupRoutes() {
 		c.String(http.StatusOK, oauthCallbackSuccessHTML)
 	})
 
-	devinCallbackHandler := func(c *gin.Context) {
+	devinCallbackHandler := func(c *web.Context) {
 		c.Header("Cache-Control", "no-store")
 		code := strings.TrimSpace(c.Query("code"))
 		state := strings.TrimSpace(c.Query("state"))
@@ -193,11 +193,11 @@ func (s *Server) setupRoutes() {
 			errStr = strings.TrimSpace(c.Query("error_description"))
 		}
 		if code == "" && errStr == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "code or error is required"})
+			c.JSON(http.StatusBadRequest, web.H{"error": "code or error is required"})
 			return
 		}
 		if _, errWrite := managementHandlers.WriteOAuthCallbackFileForPendingSession(s.cfg.AuthDir, "devin", state, code, errStr); errWrite != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid or expired OAuth callback"})
+			c.JSON(http.StatusBadRequest, web.H{"error": "invalid or expired OAuth callback"})
 			return
 		}
 		c.Header("Content-Type", "text/html; charset=utf-8")
@@ -223,7 +223,7 @@ func (s *Server) codexAlphaSearchModelRouterHost() handlers.PluginModelRouterHos
 	return nil
 }
 
-func (s *Server) codexAlphaSearchSelectionModel(ctx context.Context, c *gin.Context, body []byte, model string) (string, error) {
+func (s *Server) codexAlphaSearchSelectionModel(ctx context.Context, c *web.Context, body []byte, model string) (string, error) {
 	host := s.codexAlphaSearchModelRouterHost()
 	if host == nil {
 		return model, nil
@@ -331,15 +331,15 @@ func homeSelectionAttemptContext(ctx context.Context, selection *auth.HomeDispat
 // codexAlphaSearch forwards the standalone search endpoint used by current
 // Codex clients. Unlike /responses, this payload is already in Codex search
 // format and must not pass through a protocol translator.
-func (s *Server) codexAlphaSearch(c *gin.Context) {
+func (s *Server) codexAlphaSearch(c *web.Context) {
 	if s == nil || s.handlers == nil || s.handlers.AuthManager == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Codex auth manager unavailable"})
+		c.JSON(http.StatusServiceUnavailable, web.H{"error": "Codex auth manager unavailable"})
 		return
 	}
 
 	body, err := io.ReadAll(io.LimitReader(c.Request.Body, 16<<20))
 	if err != nil {
-		c.JSON(clienterror.HTTPStatusFromErrorOr(err, http.StatusBadRequest), gin.H{"error": "Failed to read search request"})
+		c.JSON(clienterror.HTTPStatusFromErrorOr(err, http.StatusBadRequest), web.H{"error": "Failed to read search request"})
 		return
 	}
 
@@ -359,7 +359,7 @@ func (s *Server) codexAlphaSearch(c *gin.Context) {
 	selectionModel, errRoute := s.codexAlphaSearchSelectionModel(ctx, c, body, strings.TrimSpace(routing.Model))
 	if errRoute != nil {
 		log.WithError(errRoute).Warn("codex alpha search: model router returned an unsupported target")
-		c.JSON(clienterror.HTTPStatusFromErrorOr(errRoute, http.StatusServiceUnavailable), gin.H{"error": errRoute.Error()})
+		c.JSON(clienterror.HTTPStatusFromErrorOr(errRoute, http.StatusServiceUnavailable), web.H{"error": errRoute.Error()})
 		return
 	}
 	selectionOpts := coreexecutor.Options{Headers: selectionHeaders, OriginalRequest: body}
@@ -378,14 +378,14 @@ func (s *Server) codexAlphaSearch(c *gin.Context) {
 		for _, value := range auth.SafeResponseHeaders(err).Values("Retry-After") {
 			c.Writer.Header().Add("Retry-After", value)
 		}
-		c.JSON(status, gin.H{"error": err.Error()})
+		c.JSON(status, web.H{"error": err.Error()})
 		return
 	}
 	if selected == nil {
 		if selection != nil {
 			selection.End("missing_auth")
 		}
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Codex auth unavailable"})
+		c.JSON(http.StatusServiceUnavailable, web.H{"error": "Codex auth unavailable"})
 		return
 	}
 	if selection != nil && selection.CanonicalSessionID != "" {
@@ -406,7 +406,7 @@ func (s *Server) codexAlphaSearch(c *gin.Context) {
 		attemptCtx, release, errBind := homeSelectionAttemptContext(ctx, selection)
 		if errBind != nil {
 			selection.End("attempt_bind_failed")
-			c.JSON(http.StatusServiceUnavailable, gin.H{"error": errBind.Error()})
+			c.JSON(http.StatusServiceUnavailable, web.H{"error": errBind.Error()})
 			return
 		}
 		ctx = attemptCtx
@@ -475,7 +475,7 @@ func (s *Server) codexAlphaSearch(c *gin.Context) {
 		if selection != nil {
 			selection.End("attempt_canceled")
 		}
-		c.JSON(clienterror.HTTPStatusFromErrorOr(errCtx, http.StatusRequestTimeout), gin.H{"error": errCtx.Error()})
+		c.JSON(clienterror.HTTPStatusFromErrorOr(errCtx, http.StatusRequestTimeout), web.H{"error": errCtx.Error()})
 		return
 	}
 	resp, err := performRequest(selected)
@@ -484,14 +484,14 @@ func (s *Server) codexAlphaSearch(c *gin.Context) {
 			if selection != nil {
 				selection.End("missing_base_url")
 			}
-			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+			c.JSON(http.StatusServiceUnavailable, web.H{"error": err.Error()})
 			return
 		}
 		if selection != nil {
 			selection.End("request_failed")
 		}
 		helps.RecordAPIResponseError(ctx, s.cfg, err)
-		c.JSON(clienterror.HTTPStatusFromErrorOr(err, http.StatusBadGateway), gin.H{"error": err.Error()})
+		c.JSON(clienterror.HTTPStatusFromErrorOr(err, http.StatusBadGateway), web.H{"error": err.Error()})
 		return
 	}
 	closeResponseBody := func() error {
@@ -507,7 +507,7 @@ func (s *Server) codexAlphaSearch(c *gin.Context) {
 				s.handlers.AuthManager.ReportHomeUnauthorized(ctx, selected, "codex", selectionModel)
 			}
 			selection.End("response_bind_failed")
-			c.JSON(http.StatusServiceUnavailable, gin.H{"error": errBind.Error()})
+			c.JSON(http.StatusServiceUnavailable, web.H{"error": errBind.Error()})
 			return
 		}
 		defer selection.End("response_closed")
@@ -522,7 +522,7 @@ func (s *Server) codexAlphaSearch(c *gin.Context) {
 			s.handlers.AuthManager.ReportHomeUnauthorized(ctx, selected, "codex", selectionModel, upstreamBody)
 		}
 		helps.RecordAPIResponseError(ctx, s.cfg, err)
-		c.JSON(clienterror.HTTPStatusFromErrorOr(err, http.StatusBadGateway), gin.H{"error": "Failed to read Codex search response"})
+		c.JSON(clienterror.HTTPStatusFromErrorOr(err, http.StatusBadGateway), web.H{"error": "Failed to read Codex search response"})
 		return
 	}
 	helps.AppendAPIResponseChunk(ctx, s.cfg, upstreamBody)
@@ -559,14 +559,14 @@ func (s *Server) AttachWebsocketRoute(path string, handler http.Handler) {
 	s.wsRouteMu.Unlock()
 
 	authMiddleware := AuthMiddleware(s.accessManager)
-	conditionalAuth := func(c *gin.Context) {
+	conditionalAuth := func(c *web.Context) {
 		if !s.wsAuthEnabled.Load() {
 			c.Next()
 			return
 		}
 		authMiddleware(c)
 	}
-	finalHandler := func(c *gin.Context) {
+	finalHandler := func(c *web.Context) {
 		handler.ServeHTTP(c.Writer, c.Request)
 		c.Abort()
 	}
@@ -577,7 +577,7 @@ func (s *Server) AttachWebsocketRoute(path string, handler http.Handler) {
 // isAnthropicModelsRequest reports whether a /v1/models request should be served in
 // Anthropic format. Anthropic API clients send the Anthropic-Version header; Claude
 // Code additionally uses a claude-cli User-Agent.
-func isAnthropicModelsRequest(c *gin.Context) bool {
+func isAnthropicModelsRequest(c *web.Context) bool {
 	if c.GetHeader("Anthropic-Version") != "" {
 		return true
 	}
@@ -588,8 +588,8 @@ func isAnthropicModelsRequest(c *gin.Context) bool {
 // that routes to different handlers based on the request.
 // Anthropic API requests (Anthropic-Version header, or a claude-cli User-Agent)
 // route to the Claude handler, otherwise they route to the OpenAI handler.
-func (s *Server) unifiedModelsHandler(openaiHandler *openai.OpenAIAPIHandler, claudeHandler *claude.ClaudeCodeAPIHandler) gin.HandlerFunc {
-	return func(c *gin.Context) {
+func (s *Server) unifiedModelsHandler(openaiHandler *openai.OpenAIAPIHandler, claudeHandler *claude.ClaudeCodeAPIHandler) web.HandlerFunc {
+	return func(c *web.Context) {
 		if grokbuild.IsGrokShellUserAgent(c.GetHeader("User-Agent")) {
 			s.handleGrokModels(c)
 			return
@@ -650,7 +650,7 @@ func grokModelsFromRegistryInfos(infos []*registry.ModelInfo) []grokbuild.ModelI
 	return models
 }
 
-func (s *Server) handleGrokModels(c *gin.Context) {
+func (s *Server) handleGrokModels(c *web.Context) {
 	var models []grokbuild.ModelInfo
 	if s != nil && s.cfg != nil && s.cfg.Home.Enabled {
 		entries, ok := s.loadHomeModelEntries(c)
@@ -664,7 +664,7 @@ func (s *Server) handleGrokModels(c *gin.Context) {
 	s.writeModelListResponse(c, "openai", grokbuild.BuildResponse(models))
 }
 
-func (s *Server) writeModelListResponse(c *gin.Context, sourceFormat string, payload any) {
+func (s *Server) writeModelListResponse(c *web.Context, sourceFormat string, payload any) {
 	if s != nil && s.handlers != nil {
 		s.handlers.WriteModelListResponse(c, sourceFormat, payload)
 		return
@@ -674,7 +674,7 @@ func (s *Server) writeModelListResponse(c *gin.Context, sourceFormat string, pay
 
 // handleHomeCodexClientModels builds the Codex client catalog from Home model IDs.
 // Template metadata still comes from the local/remote codex_client_models catalog.
-func (s *Server) handleHomeCodexClientModels(c *gin.Context, clientVersion string) {
+func (s *Server) handleHomeCodexClientModels(c *web.Context, clientVersion string) {
 	entries, ok := s.loadHomeModelEntries(c)
 	if !ok {
 		return
@@ -735,8 +735,8 @@ func formatHomeCodexModel(entry homeModelEntry) map[string]any {
 	return model
 }
 
-func (s *Server) geminiModelsHandler(geminiHandler *gemini.GeminiAPIHandler) gin.HandlerFunc {
-	return func(c *gin.Context) {
+func (s *Server) geminiModelsHandler(geminiHandler *gemini.GeminiAPIHandler) web.HandlerFunc {
+	return func(c *web.Context) {
 		if s != nil && s.cfg != nil && s.cfg.Home.Enabled {
 			s.handleHomeGeminiModels(c)
 			return
@@ -746,8 +746,8 @@ func (s *Server) geminiModelsHandler(geminiHandler *gemini.GeminiAPIHandler) gin
 	}
 }
 
-func (s *Server) geminiGetHandler(geminiHandler *gemini.GeminiAPIHandler) gin.HandlerFunc {
-	return func(c *gin.Context) {
+func (s *Server) geminiGetHandler(geminiHandler *gemini.GeminiAPIHandler) web.HandlerFunc {
+	return func(c *web.Context) {
 		if s != nil && s.cfg != nil && s.cfg.Home.Enabled {
 			s.handleHomeGeminiModel(c)
 			return
@@ -769,7 +769,7 @@ type homeModelEntry struct {
 	nativeCapabilityRoutes []registry.NativeCapabilityRoute
 }
 
-func (s *Server) handleHomeModels(c *gin.Context) {
+func (s *Server) handleHomeModels(c *web.Context) {
 	entries, ok := s.loadHomeModelEntries(c)
 	if !ok {
 		return
@@ -797,7 +797,7 @@ func (s *Server) handleHomeModels(c *gin.Context) {
 		}
 		filtered = append(filtered, model)
 	}
-	s.writeModelListResponse(c, "openai", gin.H{
+	s.writeModelListResponse(c, "openai", web.H{
 		"object": "list",
 		"data":   filtered,
 	})
@@ -839,18 +839,18 @@ func formatHomeClaudeModel(entry homeModelEntry) map[string]any {
 	return model
 }
 
-func (s *Server) handleHomeGeminiModels(c *gin.Context) {
+func (s *Server) handleHomeGeminiModels(c *web.Context) {
 	entries, ok := s.loadHomeModelEntries(c)
 	if !ok {
 		return
 	}
 
-	s.writeModelListResponse(c, "gemini", gin.H{
+	s.writeModelListResponse(c, "gemini", web.H{
 		"models": formatHomeGeminiModels(entries),
 	})
 }
 
-func (s *Server) handleHomeGeminiModel(c *gin.Context) {
+func (s *Server) handleHomeGeminiModel(c *web.Context) {
 	entries, ok := s.loadHomeModelEntries(c)
 	if !ok {
 		return
@@ -873,7 +873,7 @@ func (s *Server) handleHomeGeminiModel(c *gin.Context) {
 	})
 }
 
-func (s *Server) loadHomeModelEntries(c *gin.Context) ([]homeModelEntry, bool) {
+func (s *Server) loadHomeModelEntries(c *web.Context) ([]homeModelEntry, bool) {
 	if s == nil || c == nil || c.Request == nil {
 		return nil, false
 	}

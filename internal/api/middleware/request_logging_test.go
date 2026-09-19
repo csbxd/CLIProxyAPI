@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/klauspost/compress/zstd"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/clienterror"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
@@ -158,7 +158,7 @@ func TestShouldCaptureRequestBody(t *testing.T) {
 }
 
 func TestDeferredRequestBodyCaptureDoesNotDrainUnreadBody(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	logger := logging.NewFileRequestLogger(false, t.TempDir(), "", 10)
 	request := httptest.NewRequest(http.MethodPost, "/v1/responses", strings.NewReader("remaining-body"))
@@ -195,7 +195,7 @@ func TestDeferredRequestBodyCaptureDoesNotDrainUnreadBody(t *testing.T) {
 }
 
 func TestRequestLoggingMiddlewareCapturesLargeErrorRequestAndDeferredAPIRequest(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	logsDir := t.TempDir()
 	logger := logging.NewFileRequestLogger(false, logsDir, "", 10)
@@ -203,9 +203,9 @@ func TestRequestLoggingMiddlewareCapturesLargeErrorRequestAndDeferredAPIRequest(
 	payload = append(payload, []byte(`"}`)...)
 	upstreamBody := []byte(`{"model":"upstream-model","input":"translated"}`)
 
-	router := gin.New()
+	router := web.New()
 	router.Use(RequestLoggingMiddleware(logger))
-	router.POST("/v1/responses", func(c *gin.Context) {
+	router.POST("/v1/responses", func(c *web.Context) {
 		body, errRead := io.ReadAll(c.Request.Body)
 		if errRead != nil {
 			c.Status(http.StatusInternalServerError)
@@ -222,7 +222,7 @@ func TestRequestLoggingMiddlewareCapturesLargeErrorRequestAndDeferredAPIRequest(
 			Headers: http.Header{"Content-Type": []string{"application/json"}},
 			Body:    upstreamBody,
 		})
-		c.JSON(http.StatusBadRequest, gin.H{"error": "upstream rejected request"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "upstream rejected request"})
 	})
 
 	request := httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewReader(payload))
@@ -263,15 +263,15 @@ func TestRequestLoggingMiddlewareCapturesLargeErrorRequestAndDeferredAPIRequest(
 }
 
 func TestRequestLoggingMiddleware_StreamingResponsesUpstreamSections(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	logsDir := t.TempDir()
 	logger := logging.NewFileRequestLogger(true, logsDir, "", 10)
 	cfg := &config.Config{SDKConfig: config.SDKConfig{RequestLog: true}}
 
-	router := gin.New()
+	router := web.New()
 	router.Use(RequestLoggingMiddleware(logger))
-	router.POST("/v1/responses", func(c *gin.Context) {
+	router.POST("/v1/responses", func(c *web.Context) {
 		c.Header("Content-Type", "text/event-stream")
 		executorCtx := context.WithValue(context.Background(), "gin", c)
 		helps.RecordAPIRequest(executorCtx, cfg, helps.UpstreamRequestLog{
@@ -323,12 +323,12 @@ func TestRequestLoggingMiddleware_StreamingResponsesUpstreamSections(t *testing.
 }
 
 func TestAttachRequestLogSourcesUsesLoggerLogsDir(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	logsDir := t.TempDir()
 	logger := logging.NewFileRequestLogger(true, logsDir, "", 0)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 	c.Request = httptest.NewRequest(http.MethodGet, "/backend-api/codex/responses", nil)
 	c.Request.Header.Set("Upgrade", "websocket")
 
@@ -361,7 +361,7 @@ func TestAttachRequestLogSourcesUsesLoggerLogsDir(t *testing.T) {
 	}
 }
 
-func cleanupFileBodySourcesFromContext(c *gin.Context) {
+func cleanupFileBodySourcesFromContext(c *web.Context) {
 	if c == nil {
 		return
 	}
@@ -403,7 +403,7 @@ func TestDecodeCapturedRequestBodyForLogWithLimitTruncatesZstdExpansion(t *testi
 }
 
 func TestCaptureRequestInfoDecodesZstdRequestBodyForLog(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	payload := []byte(`{"model":"test-model","stream":true}`)
 	var compressed bytes.Buffer
@@ -420,7 +420,7 @@ func TestCaptureRequestInfoDecodesZstdRequestBodyForLog(t *testing.T) {
 	compressedBytes := compressed.Bytes()
 
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 	req := httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewReader(compressedBytes))
 	req.Header.Set("Content-Encoding", "zstd")
 	c.Request = req
@@ -443,15 +443,15 @@ func TestCaptureRequestInfoDecodesZstdRequestBodyForLog(t *testing.T) {
 }
 
 func TestRequestLoggingMiddleware_ClientCancellationExclusion(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	t.Run("499 status does not create error log when request-log is false", func(t *testing.T) {
 		logsDir := t.TempDir()
 		logger := logging.NewFileRequestLogger(false, logsDir, "", 10)
 
-		router := gin.New()
+		router := web.New()
 		router.Use(RequestLoggingMiddleware(logger))
-		router.POST("/v1/responses", func(c *gin.Context) {
+		router.POST("/v1/responses", func(c *web.Context) {
 			c.AbortWithStatus(clienterror.StatusClientClosedRequest)
 		})
 
@@ -477,9 +477,9 @@ func TestRequestLoggingMiddleware_ClientCancellationExclusion(t *testing.T) {
 		logsDir := t.TempDir()
 		logger := logging.NewFileRequestLogger(false, logsDir, "", 10)
 
-		router := gin.New()
+		router := web.New()
 		router.Use(RequestLoggingMiddleware(logger))
-		router.POST("/v1/responses", func(c *gin.Context) {
+		router.POST("/v1/responses", func(c *web.Context) {
 			// Simulate client closing connection mid-flight
 			ctx, cancel := context.WithCancel(c.Request.Context())
 			cancel()
@@ -505,10 +505,10 @@ func TestRequestLoggingMiddleware_ClientCancellationExclusion(t *testing.T) {
 		logsDir := t.TempDir()
 		logger := logging.NewFileRequestLogger(false, logsDir, "", 10)
 
-		router := gin.New()
+		router := web.New()
 		router.Use(RequestLoggingMiddleware(logger))
-		router.POST("/v1/responses", func(c *gin.Context) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid parameter"})
+		router.POST("/v1/responses", func(c *web.Context) {
+			c.JSON(http.StatusBadRequest, web.H{"error": "invalid parameter"})
 		})
 
 		req := httptest.NewRequest(http.MethodPost, "/v1/responses", strings.NewReader(`{"bad":"param"}`))
@@ -539,9 +539,9 @@ func TestRequestLoggingMiddleware_ClientCancellationExclusion(t *testing.T) {
 		logsDir := t.TempDir()
 		logger := logging.NewFileRequestLogger(true, logsDir, "", 10)
 
-		router := gin.New()
+		router := web.New()
 		router.Use(RequestLoggingMiddleware(logger))
-		router.POST("/v1/responses", func(c *gin.Context) {
+		router.POST("/v1/responses", func(c *web.Context) {
 			c.AbortWithStatus(clienterror.StatusClientClosedRequest)
 		})
 
@@ -567,9 +567,9 @@ func TestRequestLoggingMiddleware_ClientCancellationExclusion(t *testing.T) {
 }
 
 func TestCaptureRequestInfo_HeadersDeepCopy(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
+	c, _ := web.CreateTestContext(w)
 	req := httptest.NewRequest(http.MethodPost, "/v1/test", nil)
 	req.Header.Set("X-Audit", "original-value")
 	c.Request = req

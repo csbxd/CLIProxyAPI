@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	_ "github.com/router-for-me/CLIProxyAPI/v7/internal/translator"
 	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
@@ -178,9 +178,9 @@ func TestCodexExecutorExecuteStream_GrokBuildDetectedFromGinContext(t *testing.T
 		"api_key":  "test",
 	}}
 
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
+	c, _ := web.CreateTestContext(w)
 	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", nil)
 	c.Request.Header.Set("User-Agent", "grok-pager/1.0.5")
 	ctx := context.WithValue(context.Background(), "gin", c)

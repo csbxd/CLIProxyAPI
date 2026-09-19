@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 )
@@ -51,7 +51,7 @@ func TestListAuthFiles_IncludesRecentRequestsBuckets(t *testing.T) {
 	h.tokenStore = &memoryAuthStore{}
 
 	rec := httptest.NewRecorder()
-	ginCtx, _ := gin.CreateTestContext(rec)
+	ginCtx, _ := web.CreateTestContext(rec)
 	req := httptest.NewRequest(http.MethodGet, "/v0/management/auth-files", nil)
 	ginCtx.Request = req
 

@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -18,21 +18,21 @@ type oauthCallbackRequest struct {
 	Error       string `json:"error"`
 }
 
-func (h *Handler) PostOAuthCallback(c *gin.Context) {
+func (h *Handler) PostOAuthCallback(c *web.Context) {
 	if h == nil || h.cfg == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "error": "handler not initialized"})
+		c.JSON(http.StatusInternalServerError, web.H{"status": "error", "error": "handler not initialized"})
 		return
 	}
 
 	var req oauthCallbackRequest
 	if errBindJSON := c.ShouldBindJSON(&req); errBindJSON != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "invalid body"})
+		c.JSON(http.StatusBadRequest, web.H{"status": "error", "error": "invalid body"})
 		return
 	}
 	h.handleOAuthCallback(c, req)
 }
 
-func (h *Handler) GetOAuthCallback(c *gin.Context) {
+func (h *Handler) GetOAuthCallback(c *web.Context) {
 	req := oauthCallbackRequest{
 		Provider: strings.TrimSpace(c.Query("provider")),
 		Code:     strings.TrimSpace(c.Query("code")),
@@ -42,9 +42,9 @@ func (h *Handler) GetOAuthCallback(c *gin.Context) {
 	h.handleOAuthCallback(c, req)
 }
 
-func (h *Handler) handleOAuthCallback(c *gin.Context, req oauthCallbackRequest) {
+func (h *Handler) handleOAuthCallback(c *web.Context, req oauthCallbackRequest) {
 	if h == nil || h.cfg == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "error": "handler not initialized"})
+		c.JSON(http.StatusInternalServerError, web.H{"status": "error", "error": "handler not initialized"})
 		return
 	}
 
@@ -55,7 +55,7 @@ func (h *Handler) handleOAuthCallback(c *gin.Context, req oauthCallbackRequest) 
 	if rawRedirect := strings.TrimSpace(req.RedirectURL); rawRedirect != "" {
 		u, errParse := url.Parse(rawRedirect)
 		if errParse != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "invalid redirect_url"})
+			c.JSON(http.StatusBadRequest, web.H{"status": "error", "error": "invalid redirect_url"})
 			return
 		}
 		q := u.Query()
@@ -74,25 +74,25 @@ func (h *Handler) handleOAuthCallback(c *gin.Context, req oauthCallbackRequest) 
 	}
 
 	if state == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "state is required"})
+		c.JSON(http.StatusBadRequest, web.H{"status": "error", "error": "state is required"})
 		return
 	}
 	if err := ValidateOAuthState(state); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "invalid state"})
+		c.JSON(http.StatusBadRequest, web.H{"status": "error", "error": "invalid state"})
 		return
 	}
 	if code == "" && errMsg == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "code or error is required"})
+		c.JSON(http.StatusBadRequest, web.H{"status": "error", "error": "code or error is required"})
 		return
 	}
 
 	sessionProvider, sessionStatus, isPlugin, _, completed, ok := GetOAuthSessionDetails(state)
 	if !ok {
-		c.JSON(http.StatusNotFound, gin.H{"status": "error", "error": "unknown or expired state"})
+		c.JSON(http.StatusNotFound, web.H{"status": "error", "error": "unknown or expired state"})
 		return
 	}
 	if completed {
-		c.JSON(http.StatusConflict, gin.H{"status": "error", "error": "oauth flow is already completed"})
+		c.JSON(http.StatusConflict, web.H{"status": "error", "error": "oauth flow is already completed"})
 		return
 	}
 	provider := strings.TrimSpace(req.Provider)
@@ -107,15 +107,15 @@ func (h *Handler) handleOAuthCallback(c *gin.Context, req oauthCallbackRequest) 
 		canonicalProvider, errNormalize = NormalizeOAuthCallbackProvider(provider)
 	}
 	if errNormalize != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "unsupported provider"})
+		c.JSON(http.StatusBadRequest, web.H{"status": "error", "error": "unsupported provider"})
 		return
 	}
 	if sessionStatus != "" {
-		c.JSON(http.StatusConflict, gin.H{"status": "error", "error": sessionStatus})
+		c.JSON(http.StatusConflict, web.H{"status": "error", "error": sessionStatus})
 		return
 	}
 	if !strings.EqualFold(sessionProvider, canonicalProvider) {
-		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "provider does not match state"})
+		c.JSON(http.StatusBadRequest, web.H{"status": "error", "error": "provider does not match state"})
 		return
 	}
 
@@ -123,18 +123,18 @@ func (h *Handler) handleOAuthCallback(c *gin.Context, req oauthCallbackRequest) 
 		if errors.Is(errWrite, errOAuthSessionNotPending) {
 			_, status, okSession := GetOAuthSession(state)
 			if okSession && status != "" {
-				c.JSON(http.StatusConflict, gin.H{"status": "error", "error": status})
+				c.JSON(http.StatusConflict, web.H{"status": "error", "error": status})
 				return
 			}
-			c.JSON(http.StatusConflict, gin.H{"status": "error", "error": "oauth flow is not pending"})
+			c.JSON(http.StatusConflict, web.H{"status": "error", "error": "oauth flow is not pending"})
 			return
 		}
 		log.WithError(errWrite).Error("failed to persist oauth callback")
-		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "error": "failed to persist oauth callback"})
+		c.JSON(http.StatusInternalServerError, web.H{"status": "error", "error": "failed to persist oauth callback"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	c.JSON(http.StatusOK, web.H{"status": "ok"})
 }
 
 func firstNonEmpty(values ...string) string {

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 )
 
 type sessionIDContextKey struct{}
@@ -63,9 +63,9 @@ func ApplyCustomHeadersFromAttrs(r *http.Request, attrs map[string]string, clien
 	if len(clientHeaders) > 0 && clientHeaders[0] != nil {
 		ch = clientHeaders[0]
 	} else if ctx != nil {
-		if ginCtx, ok := ctx.Value("gin").(*gin.Context); ok && ginCtx != nil && ginCtx.Request != nil {
+		if ginCtx, ok := ctx.Value("gin").(*web.Context); ok && ginCtx != nil && ginCtx.Request != nil {
 			ch = ginCtx.Request.Header
-		} else if ginCtx, ok := ctx.(*gin.Context); ok && ginCtx != nil && ginCtx.Request != nil {
+		} else if ginCtx, ok := ctx.(*web.Context); ok && ginCtx != nil && ginCtx.Request != nil {
 			ch = ginCtx.Request.Header
 		}
 	}
@@ -80,7 +80,7 @@ func resolveCPASessionID(ctx context.Context, clientHeaders http.Header) string 
 		if HasExplicitSessionID(ctx) {
 			return ""
 		}
-		if ginCtx, ok := ctx.Value("gin").(*gin.Context); ok && ginCtx != nil && ginCtx.Request != nil {
+		if ginCtx, ok := ctx.Value("gin").(*web.Context); ok && ginCtx != nil && ginCtx.Request != nil {
 			if id := SessionIDFromContext(ginCtx.Request.Context()); id != "" {
 				return id
 			}
@@ -90,7 +90,7 @@ func resolveCPASessionID(ctx context.Context, clientHeaders http.Header) string 
 			if clientHeaders == nil {
 				clientHeaders = ginCtx.Request.Header
 			}
-		} else if ginCtx, ok := ctx.(*gin.Context); ok && ginCtx != nil && ginCtx.Request != nil {
+		} else if ginCtx, ok := ctx.(*web.Context); ok && ginCtx != nil && ginCtx.Request != nil {
 			if id := SessionIDFromContext(ginCtx.Request.Context()); id != "" {
 				return id
 			}

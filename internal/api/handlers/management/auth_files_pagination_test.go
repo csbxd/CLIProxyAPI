@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 )
@@ -110,7 +110,7 @@ func TestListAuthFilesPaginationDefaultsAndCompatibility(t *testing.T) {
 	}
 
 	recorder := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(recorder)
+	ctx, _ := web.CreateTestContext(recorder)
 	ctx.Request = httptest.NewRequest(http.MethodGet, "/v0/management/auth-files", nil)
 	handler.ListAuthFiles(ctx)
 	if recorder.Code != http.StatusOK {
@@ -138,7 +138,7 @@ func TestListAuthFilesPaginationRejectsInvalidValues(t *testing.T) {
 		"/v0/management/auth-files?page=1&page_size=invalid",
 	} {
 		recorder := httptest.NewRecorder()
-		ctx, _ := gin.CreateTestContext(recorder)
+		ctx, _ := web.CreateTestContext(recorder)
 		ctx.Request = httptest.NewRequest(http.MethodGet, requestPath, nil)
 
 		handler.ListAuthFiles(ctx)
@@ -179,7 +179,7 @@ func registerPaginatedAuthFiles(t *testing.T, authDir string, manager *coreauth.
 func requestAuthFilesPage(t *testing.T, handler *Handler, requestPath string) authFilesPaginationPayload {
 	t.Helper()
 	recorder := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(recorder)
+	ctx, _ := web.CreateTestContext(recorder)
 	ctx.Request = httptest.NewRequest(http.MethodGet, requestPath, nil)
 
 	handler.ListAuthFiles(ctx)

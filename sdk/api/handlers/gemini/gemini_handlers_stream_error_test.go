@@ -10,7 +10,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/api/handlers"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
@@ -52,7 +52,7 @@ func (*initialFailureGeminiStreamExecutor) HttpRequest(context.Context, *coreaut
 }
 
 func TestGeminiStreamGenerateContentDoesNotLoseErrorBeforeFirstPayload(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	var wg sync.WaitGroup
 	for i := 0; i < 100; i++ {
@@ -73,7 +73,7 @@ func TestGeminiStreamGenerateContentDoesNotLoseErrorBeforeFirstPayload(t *testin
 
 			base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 			h := NewGeminiAPIHandler(base)
-			router := gin.New()
+			router := web.New()
 			router.POST("/v1beta/models/*action", h.GeminiHandler)
 
 			request := httptest.NewRequest(http.MethodPost, "/v1beta/models/initial-failure-gemini-model:streamGenerateContent", strings.NewReader(`{"contents":[{"parts":[{"text":"hi"}]}]}`))

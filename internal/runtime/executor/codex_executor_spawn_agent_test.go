@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
 	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
@@ -235,7 +235,7 @@ func codexSpawnAgentTestPayload() []byte {
 func codexSpawnAgentTestContext() context.Context {
 	request := httptest.NewRequest(http.MethodPost, "/v1/responses", nil)
 	request.Header.Set("User-Agent", "codex-tui/0.154.0")
-	ginCtx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	ginCtx, _ := web.CreateTestContext(httptest.NewRecorder())
 	ginCtx.Request = request
 	return context.WithValue(context.Background(), "gin", ginCtx)
 }

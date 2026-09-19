@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 )
 
@@ -15,7 +15,7 @@ func TestPatchAPIKeyWeightForEveryFamily(t *testing.T) {
 	tests := []struct {
 		name  string
 		setup func(*config.Config)
-		patch func(*Handler, *gin.Context)
+		patch func(*Handler, *web.Context)
 		get   func(*config.Config) *int
 	}{
 		{name: "gemini", setup: func(cfg *config.Config) { cfg.GeminiKey = []config.GeminiKey{{APIKey: "key"}} }, patch: (*Handler).PatchGeminiKey, get: func(cfg *config.Config) *int { return cfg.GeminiKey[0].Weight }},
@@ -42,7 +42,7 @@ func TestPatchAPIKeyWeightForEveryFamily(t *testing.T) {
 			h := &Handler{cfg: cfg, configFilePath: writeTestConfigFile(t)}
 
 			rec := httptest.NewRecorder()
-			ctx, _ := gin.CreateTestContext(rec)
+			ctx, _ := web.CreateTestContext(rec)
 			ctx.Request = httptest.NewRequest(http.MethodPatch, "/v0/management/key", strings.NewReader(`{"index":0,"value":{"weight":7}}`))
 			ctx.Request.Header.Set("Content-Type", "application/json")
 			test.patch(h, ctx)
@@ -65,7 +65,7 @@ func TestPatchAPIKeyWeightResetAndStrictValidation(t *testing.T) {
 	patch := func(raw string) *httptest.ResponseRecorder {
 		t.Helper()
 		rec := httptest.NewRecorder()
-		ctx, _ := gin.CreateTestContext(rec)
+		ctx, _ := web.CreateTestContext(rec)
 		body := fmt.Sprintf(`{"index":0,"value":{"weight":%s}}`, raw)
 		ctx.Request = httptest.NewRequest(http.MethodPatch, "/v0/management/gemini-api-key", strings.NewReader(body))
 		ctx.Request.Header.Set("Content-Type", "application/json")
@@ -94,7 +94,7 @@ func TestPatchAPIKeyWeightResetAndStrictValidation(t *testing.T) {
 func TestPutAPIKeyWeightRejectsAboveMaximum(t *testing.T) {
 	h := &Handler{cfg: &config.Config{}, configFilePath: writeTestConfigFile(t)}
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPut, "/v0/management/gemini-api-key", strings.NewReader(`[{"api-key":"key","weight":1000001}]`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 	h.PutGeminiKeys(ctx)

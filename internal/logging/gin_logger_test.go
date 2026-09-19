@@ -6,17 +6,17 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	log "github.com/sirupsen/logrus"
 	logtest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestGinLogrusRecoveryRepanicsErrAbortHandler(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
-	engine := gin.New()
+	engine := web.New()
 	engine.Use(GinLogrusRecovery())
-	engine.GET("/abort", func(c *gin.Context) {
+	engine.GET("/abort", func(c *web.Context) {
 		panic(http.ErrAbortHandler)
 	})
 
@@ -44,11 +44,11 @@ func TestGinLogrusRecoveryRepanicsErrAbortHandler(t *testing.T) {
 }
 
 func TestGinLogrusRecoveryHandlesRegularPanic(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
-	engine := gin.New()
+	engine := web.New()
 	engine.Use(GinLogrusRecovery())
-	engine.GET("/panic", func(c *gin.Context) {
+	engine.GET("/panic", func(c *web.Context) {
 		panic("boom")
 	})
 
@@ -123,14 +123,14 @@ func TestIsAIAPIPathIncludesCodexBackend(t *testing.T) {
 }
 
 func TestGinLogrusLoggerAddsRequestIDForCodexBackend(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
-	engine := gin.New()
+	engine := web.New()
 	engine.Use(GinLogrusLogger())
 
 	var requestIDFromContext string
 	var requestIDFromGin string
-	engine.POST("/backend-api/codex/responses", func(c *gin.Context) {
+	engine.POST("/backend-api/codex/responses", func(c *web.Context) {
 		requestIDFromContext = GetRequestID(c.Request.Context())
 		requestIDFromGin = GetGinRequestID(c)
 		c.Status(http.StatusOK)
@@ -152,7 +152,7 @@ func TestGinLogrusLoggerAddsRequestIDForCodexBackend(t *testing.T) {
 }
 
 func TestGinLogrusLoggerHealthProbeStatus(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	logger := log.StandardLogger()
 	previousHooks := logger.ReplaceHooks(make(log.LevelHooks))
 	previousLevel := logger.GetLevel()
@@ -174,11 +174,11 @@ func TestGinLogrusLoggerHealthProbeStatus(t *testing.T) {
 		{"other_method", "POST", "/healthz", 200, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			engine := gin.New()
+			engine := web.New()
 			engine.Use(GinLogrusLogger())
 			// Simulate an early global middleware response before route handlers run.
-			engine.Use(func(c *gin.Context) { c.AbortWithStatus(tc.status) })
-			engine.Handle(tc.method, tc.path, func(c *gin.Context) { t.Error("aborted request reached route handler") })
+			engine.Use(func(c *web.Context) { c.AbortWithStatus(tc.status) })
+			engine.Handle(tc.method, tc.path, func(c *web.Context) { t.Error("aborted request reached route handler") })
 			hook.Reset()
 			recorder := httptest.NewRecorder()
 			engine.ServeHTTP(recorder, httptest.NewRequest(tc.method, tc.path, nil))

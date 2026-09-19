@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
 	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/executor"
@@ -44,9 +44,9 @@ func TestRequestLoggingDoesNotMarkUpstreamAttempt(t *testing.T) {
 }
 
 func TestRecordAPIRequestClonesDeferredBodyWhenRequestLogDisabled(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	ginCtx, _ := gin.CreateTestContext(recorder)
+	ginCtx, _ := web.CreateTestContext(recorder)
 	ctx := context.WithValue(context.Background(), "gin", ginCtx)
 	body := []byte(`{"model":"original"}`)
 
@@ -86,7 +86,7 @@ func TestRecordAPIResponseMetadataStoresHeadersWhenRequestLogDisabled(t *testing
 }
 
 func TestAPIResponseAttemptsAreSeparated(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 
 	tests := []struct {
 		name              string
@@ -102,7 +102,7 @@ func TestAPIResponseAttemptsAreSeparated(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			recorder := httptest.NewRecorder()
-			ginCtx, _ := gin.CreateTestContext(recorder)
+			ginCtx, _ := web.CreateTestContext(recorder)
 			var responseSource *logging.FileBodySource
 			if tt.fileBacked {
 				var errSource error

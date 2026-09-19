@@ -18,7 +18,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/clienterror"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
@@ -182,7 +182,7 @@ func (h *Handler) Close() {
 }
 
 // Handle forwards a WebRTC SDP bootstrap request to the Codex realtime calls endpoint.
-func (h *Handler) Handle(c *gin.Context) {
+func (h *Handler) Handle(c *web.Context) {
 	if h == nil || h.authManager == nil {
 		writeLiveError(c, http.StatusServiceUnavailable, "Codex auth manager unavailable")
 		return
@@ -822,7 +822,7 @@ func writeResponseHeaders(destination, source http.Header) {
 	}
 }
 
-func writeLiveError(c *gin.Context, status int, message string) {
+func writeLiveError(c *web.Context, status int, message string) {
 	if c != nil && c.Request != nil && c.Request.URL != nil && strings.HasPrefix(c.Request.URL.Path, "/v1/realtime") {
 		errorType := "api_error"
 		if status >= http.StatusBadRequest && status < http.StatusInternalServerError {
@@ -834,10 +834,10 @@ func writeLiveError(c *gin.Context, status int, message string) {
 		writeRealtimeError(c, status, message, errorType, "realtime_request_failed")
 		return
 	}
-	c.JSON(status, gin.H{"error": message})
+	c.JSON(status, web.H{"error": message})
 }
 
-func writeSelectionError(c *gin.Context, err error) {
+func writeSelectionError(c *web.Context, err error) {
 	status := clienterror.HTTPStatusFromErrorOr(err, http.StatusServiceUnavailable)
 	for _, value := range auth.SafeResponseHeaders(err).Values("Retry-After") {
 		c.Writer.Header().Add("Retry-After", value)

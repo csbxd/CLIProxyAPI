@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/google/uuid"
 	internalcache "github.com/router-for-me/CLIProxyAPI/v7/internal/cache"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/runtime/executor/helps"
@@ -106,7 +106,7 @@ func codexReasoningReplaySessionKey(ctx context.Context, from sdktranslator.Form
 	if value := codexReasoningReplaySessionKeyFromHeaders(opts.Headers); value != "" {
 		return value
 	}
-	if ginCtx, ok := ctx.Value("gin").(*gin.Context); ok && ginCtx != nil && ginCtx.Request != nil {
+	if ginCtx, ok := ctx.Value("gin").(*web.Context); ok && ginCtx != nil && ginCtx.Request != nil {
 		if value := codexReasoningReplaySessionKeyFromHeaders(ginCtx.Request.Header); value != "" {
 			return value
 		}

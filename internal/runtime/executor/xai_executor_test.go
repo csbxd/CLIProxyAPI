@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/google/uuid"
 	xaiauth "github.com/router-for-me/CLIProxyAPI/v7/internal/auth/xai"
 	internalcache "github.com/router-for-me/CLIProxyAPI/v7/internal/cache"
@@ -31,9 +31,9 @@ import (
 )
 
 func testContextWithAPIKey(apiKey string) context.Context {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	rec := httptest.NewRecorder()
-	ginCtx, _ := gin.CreateTestContext(rec)
+	ginCtx, _ := web.CreateTestContext(rec)
 	ginCtx.Set("userApiKey", apiKey)
 	return context.WithValue(context.Background(), "gin", ginCtx)
 }

@@ -17,7 +17,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	managementHandlers "github.com/router-for-me/CLIProxyAPI/v7/internal/api/handlers/management"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/api/middleware"
 	codexlive "github.com/router-for-me/CLIProxyAPI/v7/internal/client/codex/live"
@@ -37,7 +37,7 @@ import (
 // It encapsulates the Gin engine, HTTP server, handlers, and configuration.
 type Server struct {
 	// engine is the Gin web framework engine instance.
-	engine *gin.Engine
+	engine *web.Engine
 
 	// server is the underlying HTTP server.
 	server *http.Server
@@ -123,11 +123,11 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 	}
 	// Set gin mode
 	if !cfg.Debug {
-		gin.SetMode(gin.ReleaseMode)
+		web.SetMode(web.ReleaseMode)
 	}
 
 	// Create gin engine
-	engine := gin.New()
+	engine := web.New()
 	if optionState.engineConfigurator != nil {
 		optionState.engineConfigurator(engine)
 	}

@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/gorilla/websocket"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/interfaces"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
@@ -198,9 +198,9 @@ func requestExecutionMetadata(ctx context.Context) map[string]any {
 	// Only include it if the client explicitly provides it.
 	key := ""
 	requestPath := ""
-	var ginCtx *gin.Context
+	var ginCtx *web.Context
 	if ctx != nil {
-		if requestGinCtx, ok := ctx.Value("gin").(*gin.Context); ok && requestGinCtx != nil && requestGinCtx.Request != nil {
+		if requestGinCtx, ok := ctx.Value("gin").(*web.Context); ok && requestGinCtx != nil && requestGinCtx.Request != nil {
 			ginCtx = requestGinCtx
 			key = strings.TrimSpace(ginCtx.GetHeader("Idempotency-Key"))
 			requestPath = strings.TrimSpace(ginCtx.FullPath())
@@ -287,7 +287,7 @@ func enrichContextWithSessionHierarchy(ctx context.Context, headers http.Header,
 	return EnrichContextWithSessionHierarchy(ctx, headers, payload, metadata)
 }
 
-func requestCallerScope(ginCtx *gin.Context) string {
+func requestCallerScope(ginCtx *web.Context) string {
 	if ginCtx == nil {
 		return ""
 	}
@@ -444,7 +444,7 @@ func isNilInterface(value any) bool {
 //
 // Returns:
 //   - string: The alt parameter value, or empty string if it's "sse"
-func (h *BaseAPIHandler) GetAlt(c *gin.Context) string {
+func (h *BaseAPIHandler) GetAlt(c *web.Context) string {
 	var alt string
 	var hasAlt bool
 	alt, hasAlt = c.GetQuery("alt")
@@ -469,7 +469,7 @@ func (h *BaseAPIHandler) GetAlt(c *gin.Context) string {
 // Returns:
 //   - context.Context: The new context with cancellation and embedded values.
 //   - APIHandlerCancelFunc: A function to cancel the context and log the response.
-func (h *BaseAPIHandler) GetContextWithCancel(handler interfaces.APIHandler, c *gin.Context, ctx context.Context) (context.Context, APIHandlerCancelFunc) {
+func (h *BaseAPIHandler) GetContextWithCancel(handler interfaces.APIHandler, c *web.Context, ctx context.Context) (context.Context, APIHandlerCancelFunc) {
 	parentCtx := ctx
 	if parentCtx == nil {
 		parentCtx = context.Background()
@@ -584,7 +584,7 @@ func (h *BaseAPIHandler) GetContextWithCancel(handler interfaces.APIHandler, c *
 
 // StartNonStreamingKeepAlive emits blank lines every 5 seconds while waiting for a non-streaming response.
 // It returns a stop function that must be called before writing the final response.
-func (h *BaseAPIHandler) StartNonStreamingKeepAlive(c *gin.Context, ctx context.Context) func() {
+func (h *BaseAPIHandler) StartNonStreamingKeepAlive(c *web.Context, ctx context.Context) func() {
 	if h == nil || c == nil {
 		return func() {}
 	}
@@ -630,7 +630,7 @@ func (h *BaseAPIHandler) StartNonStreamingKeepAlive(c *gin.Context, ctx context.
 }
 
 // appendAPIResponse preserves any previously captured API response and appends new data.
-func appendAPIResponse(c *gin.Context, data []byte) {
+func appendAPIResponse(c *web.Context, data []byte) {
 	if c == nil || len(data) == 0 {
 		return
 	}

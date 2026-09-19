@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/clienterror"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/interfaces"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
@@ -33,10 +33,10 @@ type RequestInfo struct {
 	deferredBodyCapture *deferredRequestBodyCapture // deferredBodyCapture spools large error-only request bodies.
 }
 
-// ResponseWriterWrapper wraps the standard gin.ResponseWriter to intercept and log response data.
+// ResponseWriterWrapper wraps the standard web.ResponseWriter to intercept and log response data.
 // It is designed to handle both standard and streaming responses, ensuring that logging operations do not block the client response.
 type ResponseWriterWrapper struct {
-	gin.ResponseWriter
+	web.ResponseWriter
 	body                *bytes.Buffer              // body is a buffer to store the response body for non-streaming responses.
 	isStreaming         bool                       // isStreaming indicates whether the response is a streaming type (e.g., text/event-stream).
 	streamWriter        logging.StreamingLogWriter // streamWriter is a writer for handling streaming log entries.
@@ -51,16 +51,16 @@ type ResponseWriterWrapper struct {
 }
 
 // NewResponseWriterWrapper creates and initializes a new ResponseWriterWrapper.
-// It takes the original gin.ResponseWriter, a logger instance, and request information.
+// It takes the original web.ResponseWriter, a logger instance, and request information.
 //
 // Parameters:
-//   - w: The original gin.ResponseWriter to wrap.
+//   - w: The original web.ResponseWriter to wrap.
 //   - logger: The logging service to use for recording requests.
 //   - requestInfo: The pre-captured information about the incoming request.
 //
 // Returns:
 //   - A pointer to a new ResponseWriterWrapper.
-func NewResponseWriterWrapper(w gin.ResponseWriter, logger logging.RequestLogger, requestInfo *RequestInfo) *ResponseWriterWrapper {
+func NewResponseWriterWrapper(w web.ResponseWriter, logger logging.RequestLogger, requestInfo *RequestInfo) *ResponseWriterWrapper {
 	return &ResponseWriterWrapper{
 		ResponseWriter: w,
 		body:           &bytes.Buffer{},
@@ -261,7 +261,7 @@ func (w *ResponseWriterWrapper) processStreamingChunks(done chan struct{}) {
 // For streaming responses, it closes the chunk channel and the stream writer.
 // For non-streaming responses, it logs the complete request and response details,
 // including any API-specific request/response data stored in the Gin context.
-func (w *ResponseWriterWrapper) Finalize(c *gin.Context) error {
+func (w *ResponseWriterWrapper) Finalize(c *web.Context) error {
 	if w.requestInfo != nil && w.requestInfo.deferredBodyCapture != nil {
 		defer w.requestInfo.deferredBodyCapture.Cleanup()
 	}
@@ -388,7 +388,7 @@ func (w *ResponseWriterWrapper) cloneHeaders() map[string][]string {
 	return finalHeaders
 }
 
-func (w *ResponseWriterWrapper) extractAPIRequest(c *gin.Context) []byte {
+func (w *ResponseWriterWrapper) extractAPIRequest(c *web.Context) []byte {
 	apiRequest, isExist := c.Get("API_REQUEST")
 	if !isExist {
 		return nil
@@ -400,7 +400,7 @@ func (w *ResponseWriterWrapper) extractAPIRequest(c *gin.Context) []byte {
 	return data
 }
 
-func (w *ResponseWriterWrapper) extractDeferredAPIRequest(c *gin.Context) []byte {
+func (w *ResponseWriterWrapper) extractDeferredAPIRequest(c *web.Context) []byte {
 	if c == nil {
 		return nil
 	}
@@ -422,7 +422,7 @@ func (w *ResponseWriterWrapper) extractDeferredAPIRequest(c *gin.Context) []byte
 	return body.Bytes()
 }
 
-func (w *ResponseWriterWrapper) extractAPIResponse(c *gin.Context) []byte {
+func (w *ResponseWriterWrapper) extractAPIResponse(c *web.Context) []byte {
 	apiResponse, isExist := c.Get("API_RESPONSE")
 	if !isExist {
 		return nil
@@ -434,15 +434,15 @@ func (w *ResponseWriterWrapper) extractAPIResponse(c *gin.Context) []byte {
 	return data
 }
 
-func (w *ResponseWriterWrapper) extractAPIRequestSource(c *gin.Context) *logging.FileBodySource {
+func (w *ResponseWriterWrapper) extractAPIRequestSource(c *web.Context) *logging.FileBodySource {
 	return extractFileBodySource(c, logging.APIRequestSourceContextKey)
 }
 
-func (w *ResponseWriterWrapper) extractAPIResponseSource(c *gin.Context) *logging.FileBodySource {
+func (w *ResponseWriterWrapper) extractAPIResponseSource(c *web.Context) *logging.FileBodySource {
 	return extractFileBodySource(c, logging.APIResponseSourceContextKey)
 }
 
-func (w *ResponseWriterWrapper) extractAPIWebsocketTimeline(c *gin.Context) []byte {
+func (w *ResponseWriterWrapper) extractAPIWebsocketTimeline(c *web.Context) []byte {
 	apiTimeline, isExist := c.Get("API_WEBSOCKET_TIMELINE")
 	if !isExist {
 		return nil
@@ -454,11 +454,11 @@ func (w *ResponseWriterWrapper) extractAPIWebsocketTimeline(c *gin.Context) []by
 	return bytes.Clone(data)
 }
 
-func (w *ResponseWriterWrapper) extractAPIWebsocketTimelineSource(c *gin.Context) *logging.FileBodySource {
+func (w *ResponseWriterWrapper) extractAPIWebsocketTimelineSource(c *web.Context) *logging.FileBodySource {
 	return extractFileBodySource(c, logging.APIWebsocketTimelineSourceContextKey)
 }
 
-func (w *ResponseWriterWrapper) extractAPIResponseTimestamp(c *gin.Context) time.Time {
+func (w *ResponseWriterWrapper) extractAPIResponseTimestamp(c *web.Context) time.Time {
 	ts, isExist := c.Get("API_RESPONSE_TIMESTAMP")
 	if !isExist {
 		return time.Time{}
@@ -469,7 +469,7 @@ func (w *ResponseWriterWrapper) extractAPIResponseTimestamp(c *gin.Context) time
 	return time.Time{}
 }
 
-func (w *ResponseWriterWrapper) extractRequestBody(c *gin.Context) []byte {
+func (w *ResponseWriterWrapper) extractRequestBody(c *web.Context) []byte {
 	if body := extractBodyOverride(c, requestBodyOverrideContextKey); len(body) > 0 {
 		return body
 	}
@@ -504,7 +504,7 @@ func (w *ResponseWriterWrapper) extractRequestBody(c *gin.Context) []byte {
 	return append(body, statusMarker...)
 }
 
-func (w *ResponseWriterWrapper) extractResponseBody(c *gin.Context) []byte {
+func (w *ResponseWriterWrapper) extractResponseBody(c *web.Context) []byte {
 	if body := extractBodyOverride(c, responseBodyOverrideContextKey); len(body) > 0 {
 		return body
 	}
@@ -514,15 +514,15 @@ func (w *ResponseWriterWrapper) extractResponseBody(c *gin.Context) []byte {
 	return bytes.Clone(w.body.Bytes())
 }
 
-func (w *ResponseWriterWrapper) extractWebsocketTimeline(c *gin.Context) []byte {
+func (w *ResponseWriterWrapper) extractWebsocketTimeline(c *web.Context) []byte {
 	return extractBodyOverride(c, websocketTimelineOverrideContextKey)
 }
 
-func (w *ResponseWriterWrapper) extractWebsocketTimelineSource(c *gin.Context) *logging.FileBodySource {
+func (w *ResponseWriterWrapper) extractWebsocketTimelineSource(c *web.Context) *logging.FileBodySource {
 	return extractFileBodySource(c, logging.WebsocketTimelineSourceContextKey)
 }
 
-func extractFileBodySource(c *gin.Context, key string) *logging.FileBodySource {
+func extractFileBodySource(c *web.Context, key string) *logging.FileBodySource {
 	if c == nil {
 		return nil
 	}
@@ -537,7 +537,7 @@ func extractFileBodySource(c *gin.Context, key string) *logging.FileBodySource {
 	return source
 }
 
-func extractBodyOverride(c *gin.Context, key string) []byte {
+func extractBodyOverride(c *web.Context, key string) []byte {
 	if c == nil {
 		return nil
 	}
@@ -739,7 +739,7 @@ func hasActionableAPIResponseErrors(apiErrors []*interfaces.ErrorMessage) bool {
 	return false
 }
 
-func isContextCanceled(c *gin.Context) bool {
+func isContextCanceled(c *web.Context) bool {
 	if c == nil || c.Request == nil {
 		return false
 	}
@@ -747,7 +747,7 @@ func isContextCanceled(c *gin.Context) bool {
 	return ctx != nil && errors.Is(ctx.Err(), context.Canceled)
 }
 
-func hasActionableError(c *gin.Context, statusCode int, apiErrors []*interfaces.ErrorMessage) bool {
+func hasActionableError(c *web.Context, statusCode int, apiErrors []*interfaces.ErrorMessage) bool {
 	if hasActionableAPIResponseErrors(apiErrors) {
 		return true
 	}

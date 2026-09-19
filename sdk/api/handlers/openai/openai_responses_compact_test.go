@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/klauspost/compress/zstd"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/api/handlers"
@@ -51,7 +51,7 @@ func (e *compactCaptureExecutor) HttpRequest(context.Context, *coreauth.Auth, *h
 }
 
 func TestOpenAIResponsesCompactRejectsStream(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	executor := &compactCaptureExecutor{}
 	manager := coreauth.NewManager(nil, nil, nil)
 	manager.RegisterExecutor(executor)
@@ -67,7 +67,7 @@ func TestOpenAIResponsesCompactRejectsStream(t *testing.T) {
 
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.POST("/v1/responses/compact", h.Compact)
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/responses/compact", strings.NewReader(`{"model":"test-model","stream":true}`))
@@ -84,7 +84,7 @@ func TestOpenAIResponsesCompactRejectsStream(t *testing.T) {
 }
 
 func TestOpenAIResponsesCompactExecute(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	executor := &compactCaptureExecutor{}
 	manager := coreauth.NewManager(nil, nil, nil)
 	manager.RegisterExecutor(executor)
@@ -100,7 +100,7 @@ func TestOpenAIResponsesCompactExecute(t *testing.T) {
 
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.POST("/v1/responses/compact", h.Compact)
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/responses/compact", strings.NewReader(`{"model":"test-model","input":"hello"}`))
@@ -123,7 +123,7 @@ func TestOpenAIResponsesCompactExecute(t *testing.T) {
 }
 
 func TestOpenAIResponsesCompactDecodesZstdRequestBody(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	executor := &compactCaptureExecutor{}
 	manager := coreauth.NewManager(nil, nil, nil)
 	manager.RegisterExecutor(executor)
@@ -139,7 +139,7 @@ func TestOpenAIResponsesCompactDecodesZstdRequestBody(t *testing.T) {
 
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.POST("/v1/responses/compact", h.Compact)
 
 	var compressed bytes.Buffer
@@ -227,7 +227,7 @@ func (e *compactFailureMockExecutor) HttpRequest(context.Context, *coreauth.Auth
 }
 
 func TestOpenAIResponsesCompactTransientFailureDoesNotCooldownAuthAndPreservesError(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	executor := &compactFailureMockExecutor{
 		compactErr: compactMockStatusError{
 			code: http.StatusInternalServerError,
@@ -254,7 +254,7 @@ func TestOpenAIResponsesCompactTransientFailureDoesNotCooldownAuthAndPreservesEr
 
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.POST("/v1/responses/compact", h.Compact)
 	router.POST("/v1/responses", h.Responses)
 
@@ -300,7 +300,7 @@ func TestOpenAIResponsesCompactTransientFailureDoesNotCooldownAuthAndPreservesEr
 }
 
 func TestOpenAIResponsesCompactRequestFaultStopsFallbackAndPreservesError(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	executor := &compactFailureMockExecutor{
 		compactErr: compactMockStatusError{
 			code: http.StatusNotFound,
@@ -327,7 +327,7 @@ func TestOpenAIResponsesCompactRequestFaultStopsFallbackAndPreservesError(t *tes
 
 	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	h := NewOpenAIResponsesAPIHandler(base)
-	router := gin.New()
+	router := web.New()
 	router.POST("/v1/responses/compact", h.Compact)
 	router.POST("/v1/responses", h.Responses)
 

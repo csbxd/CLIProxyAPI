@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/redisqueue"
 )
 
@@ -17,7 +17,7 @@ func TestGetUsageQueuePopsRequestedRecords(t *testing.T) {
 		redisqueue.Enqueue([]byte(`{"id":3}`))
 
 		rec := httptest.NewRecorder()
-		ginCtx, _ := gin.CreateTestContext(rec)
+		ginCtx, _ := web.CreateTestContext(rec)
 		ginCtx.Request = httptest.NewRequest(http.MethodGet, "/v0/management/usage-queue?count=2", nil)
 
 		h := &Handler{}
@@ -49,7 +49,7 @@ func TestGetUsageQueueInvalidCountDoesNotPop(t *testing.T) {
 		redisqueue.Enqueue([]byte(`{"id":1}`))
 
 		rec := httptest.NewRecorder()
-		ginCtx, _ := gin.CreateTestContext(rec)
+		ginCtx, _ := web.CreateTestContext(rec)
 		ginCtx.Request = httptest.NewRequest(http.MethodGet, "/v0/management/usage-queue?count=0", nil)
 
 		h := &Handler{}

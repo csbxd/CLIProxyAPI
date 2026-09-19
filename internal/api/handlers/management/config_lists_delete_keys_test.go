@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 )
 
@@ -37,7 +37,7 @@ func TestDeleteGeminiKey_RequiresBaseURLWhenAPIKeyDuplicated(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
+	c, _ := web.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodDelete, "/v0/management/gemini-api-key?api-key=shared-key", nil)
 
 	h.DeleteGeminiKey(c)
@@ -64,7 +64,7 @@ func TestDeleteGeminiKey_DeletesOnlyMatchingBaseURL(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
+	c, _ := web.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodDelete, "/v0/management/gemini-api-key?api-key=shared-key&base-url=https://a.example.com", nil)
 
 	h.DeleteGeminiKey(c)
@@ -105,7 +105,7 @@ func TestDeleteGeminiStyleKeyRejectsAmbiguousRoutingIdentity(t *testing.T) {
 			}
 			handler := &Handler{cfg: cfg, configFilePath: writeTestConfigFile(t)}
 			recorder := httptest.NewRecorder()
-			ctx, _ := gin.CreateTestContext(recorder)
+			ctx, _ := web.CreateTestContext(recorder)
 			ctx.Request = httptest.NewRequest(http.MethodDelete, path, nil)
 
 			if tc.interactions {
@@ -157,7 +157,7 @@ func TestPatchGeminiStyleKeyRoutingIdentity(t *testing.T) {
 			}
 			handler := &Handler{cfg: cfg, configFilePath: writeTestConfigFile(t)}
 			recorder := httptest.NewRecorder()
-			ctx, _ := gin.CreateTestContext(recorder)
+			ctx, _ := web.CreateTestContext(recorder)
 			ctx.Request = httptest.NewRequest(http.MethodPatch, path, strings.NewReader(`{"match":"shared-key","value":{"prefix":"updated"}}`))
 
 			if tc.interactions {
@@ -198,7 +198,7 @@ func TestDeleteClaudeKey_DeletesEmptyBaseURLWhenExplicitlyProvided(t *testing.T)
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
+	c, _ := web.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodDelete, "/v0/management/claude-api-key?api-key=shared-key&base-url=", nil)
 
 	h.DeleteClaudeKey(c)
@@ -228,7 +228,7 @@ func TestDeleteVertexCompatKey_DeletesOnlyMatchingBaseURL(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
+	c, _ := web.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodDelete, "/v0/management/vertex-api-key?api-key=shared-key&base-url=https://b.example.com", nil)
 
 	h.DeleteVertexCompatKey(c)
@@ -258,7 +258,7 @@ func TestDeleteXAIKey_RequiresBaseURLWhenAPIKeyDuplicated(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
+	c, _ := web.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodDelete, "/v0/management/xai-api-key?api-key=shared-key", nil)
 
 	h.DeleteXAIKey(c)
@@ -285,7 +285,7 @@ func TestDeleteMetaKey_RequiresBaseURLWhenAPIKeyDuplicated(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
+	c, _ := web.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodDelete, "/v0/management/meta-api-key?api-key=shared-key", nil)
 
 	h.DeleteMetaKey(c)
@@ -312,7 +312,7 @@ func TestDeleteCodexKey_RequiresBaseURLWhenAPIKeyDuplicated(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
+	c, _ := web.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodDelete, "/v0/management/codex-api-key?api-key=shared-key", nil)
 
 	h.DeleteCodexKey(c)

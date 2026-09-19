@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	claudeauth "github.com/router-for-me/CLIProxyAPI/v7/internal/auth/claude"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/auth/codex"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/credentialweight"
@@ -25,9 +25,9 @@ import (
 )
 
 // PatchAuthFileStatus toggles the disabled state of an auth file
-func (h *Handler) PatchAuthFileStatus(c *gin.Context) {
+func (h *Handler) PatchAuthFileStatus(c *web.Context) {
 	if h.authManager == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "core auth manager unavailable"})
+		c.JSON(http.StatusServiceUnavailable, web.H{"error": "core auth manager unavailable"})
 		return
 	}
 
@@ -37,18 +37,18 @@ func (h *Handler) PatchAuthFileStatus(c *gin.Context) {
 		Disabled  *bool  `json:"disabled"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "invalid request body"})
 		return
 	}
 
 	name := strings.TrimSpace(req.Name)
 	authIndex := strings.TrimSpace(req.AuthIndex)
 	if name == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "name is required"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "name is required"})
 		return
 	}
 	if req.Disabled == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "disabled is required"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "disabled is required"})
 		return
 	}
 
@@ -64,14 +64,14 @@ func (h *Handler) PatchAuthFileStatus(c *gin.Context) {
 
 	targetAuth, _ := h.lookupAuthFile(name, authIndex)
 	if targetAuth == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "auth file not found"})
+		c.JSON(http.StatusNotFound, web.H{"error": "auth file not found"})
 		return
 	}
 	if coreauth.IsPluginVirtualAuth(targetAuth) {
 		// Allow status changes only when targeting the source auth file name, matching delete semantics.
 		// Expanded virtual project auths still cannot be modified independently.
 		if !isPluginVirtualSourceDelete(name, targetAuth) {
-			c.JSON(http.StatusConflict, gin.H{"error": errPluginVirtualAuth.Error()})
+			c.JSON(http.StatusConflict, web.H{"error": errPluginVirtualAuth.Error()})
 			return
 		}
 		hookAuths, errPatch := h.patchPluginVirtualSourceStatus(ctx, targetAuth, *req.Disabled)
@@ -80,17 +80,17 @@ func (h *Handler) PatchAuthFileStatus(c *gin.Context) {
 			if errors.Is(errPatch, errAuthFileNotFound) || os.IsNotExist(errPatch) {
 				status = http.StatusNotFound
 			}
-			c.JSON(status, gin.H{"error": errPatch.Error()})
+			c.JSON(status, web.H{"error": errPatch.Error()})
 			return
 		}
 		locked = false
 		h.authStatusMu.Unlock()
 		if errHook := h.invokePostAuthPersistHooks(ctx, hookAuths); errHook != nil {
 			log.Errorf("post-auth persist hook failed for plugin virtual source status update on %s: %v", targetAuth.ID, errHook)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to synchronize plugin virtual auth: %v", errHook)})
+			c.JSON(http.StatusInternalServerError, web.H{"error": fmt.Sprintf("failed to synchronize plugin virtual auth: %v", errHook)})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"status": "ok", "disabled": *req.Disabled})
+		c.JSON(http.StatusOK, web.H{"status": "ok", "disabled": *req.Disabled})
 		return
 	}
 
@@ -99,12 +99,12 @@ func (h *Handler) PatchAuthFileStatus(c *gin.Context) {
 		handled, errToggle := toggleConfigAPIKeyExcludedAll(h.cfg, targetAuth, *req.Disabled)
 		if errToggle != nil {
 			h.mu.Unlock()
-			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to update config api key: %v", errToggle)})
+			c.JSON(http.StatusInternalServerError, web.H{"error": fmt.Sprintf("failed to update config api key: %v", errToggle)})
 			return
 		}
 		if !handled {
 			h.mu.Unlock()
-			c.JSON(http.StatusNotFound, gin.H{"error": "config api key entry not found"})
+			c.JSON(http.StatusNotFound, web.H{"error": "config api key entry not found"})
 			return
 		}
 		cfgSnapshot, okSnapshot := h.saveConfigAndSnapshotLocked(c)
@@ -116,7 +116,7 @@ func (h *Handler) PatchAuthFileStatus(c *gin.Context) {
 		if h.tokenStore != nil {
 			_ = h.tokenStore.Delete(ctx, targetAuth.ID)
 		}
-		c.JSON(http.StatusOK, gin.H{
+		c.JSON(http.StatusOK, web.H{
 			"status":           "ok",
 			"disabled":         *req.Disabled,
 			"via":              "config:excluded-models",
@@ -128,7 +128,7 @@ func (h *Handler) PatchAuthFileStatus(c *gin.Context) {
 	applyAuthDisabledState(targetAuth, *req.Disabled)
 	updatedAuth, err := h.authManager.Update(ctx, targetAuth)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to update auth: %v", err)})
+		c.JSON(http.StatusInternalServerError, web.H{"error": fmt.Sprintf("failed to update auth: %v", err)})
 		return
 	}
 	hookAuth := updatedAuth
@@ -139,11 +139,11 @@ func (h *Handler) PatchAuthFileStatus(c *gin.Context) {
 	h.authStatusMu.Unlock()
 	if errHook := h.invokePostAuthPersistHooks(ctx, []*coreauth.Auth{hookAuth}); errHook != nil {
 		log.Errorf("post-auth persist hook failed for status update on %s: %v", targetAuth.ID, errHook)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to synchronize auth runtime: %v", errHook)})
+		c.JSON(http.StatusInternalServerError, web.H{"error": fmt.Sprintf("failed to synchronize auth runtime: %v", errHook)})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "ok", "disabled": *req.Disabled})
+	c.JSON(http.StatusOK, web.H{"status": "ok", "disabled": *req.Disabled})
 }
 
 // patchPluginVirtualSourceStatus toggles disabled on a plugin multi-auth source file and all
@@ -255,9 +255,9 @@ func applyAuthDisabledState(auth *coreauth.Auth, disabled bool) {
 }
 
 // PatchAuthFileFields updates arbitrary metadata fields of an auth file.
-func (h *Handler) PatchAuthFileFields(c *gin.Context) {
+func (h *Handler) PatchAuthFileFields(c *web.Context) {
 	if h.authManager == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "core auth manager unavailable"})
+		c.JSON(http.StatusServiceUnavailable, web.H{"error": "core auth manager unavailable"})
 		return
 	}
 
@@ -265,35 +265,35 @@ func (h *Handler) PatchAuthFileFields(c *gin.Context) {
 	decoder := json.NewDecoder(c.Request.Body)
 	decoder.UseNumber()
 	if err := decoder.Decode(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "invalid request body"})
 		return
 	}
 
 	nameRaw, ok := req["name"]
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "name is required"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "name is required"})
 		return
 	}
 	var nameValue string
 	if err := json.Unmarshal(nameRaw, &nameValue); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "name is required"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "name is required"})
 		return
 	}
 	name := strings.TrimSpace(nameValue)
 	if name == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "name is required"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "name is required"})
 		return
 	}
 	delete(req, "name")
 	var errNormalize error
 	req, errNormalize = normalizeAuthFilePatchFields(req)
 	if errNormalize != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": errNormalize.Error()})
+		c.JSON(http.StatusBadRequest, web.H{"error": errNormalize.Error()})
 		return
 	}
 	requestRetryPatch, errRequestRetry := decodeAuthFileRequestRetryPatch(req)
 	if errRequestRetry != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": errRequestRetry.Error()})
+		c.JSON(http.StatusBadRequest, web.H{"error": errRequestRetry.Error()})
 		return
 	}
 	for key := range req {
@@ -319,11 +319,11 @@ func (h *Handler) PatchAuthFileFields(c *gin.Context) {
 	}
 
 	if targetAuth == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "auth file not found"})
+		c.JSON(http.StatusNotFound, web.H{"error": "auth file not found"})
 		return
 	}
 	if coreauth.IsPluginVirtualAuth(targetAuth) {
-		c.JSON(http.StatusConflict, gin.H{"error": errPluginVirtualAuth.Error()})
+		c.JSON(http.StatusConflict, web.H{"error": errPluginVirtualAuth.Error()})
 		return
 	}
 	coreauth.NormalizeCredentialMetadata(targetAuth.Metadata)
@@ -333,12 +333,12 @@ func (h *Handler) PatchAuthFileFields(c *gin.Context) {
 	for key, rawValue := range req {
 		fieldPath := strings.TrimSpace(key)
 		if fieldPath == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "field name is required"})
+			c.JSON(http.StatusBadRequest, web.H{"error": "field name is required"})
 			return
 		}
 		value, errDecode := decodeAuthFileFieldValue(rawValue)
 		if errDecode != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("invalid field %s", fieldPath)})
+			c.JSON(http.StatusBadRequest, web.H{"error": fmt.Sprintf("invalid field %s", fieldPath)})
 			return
 		}
 		if targetAuth.Metadata == nil {
@@ -350,23 +350,23 @@ func (h *Handler) PatchAuthFileFields(c *gin.Context) {
 				delete(targetAuth.Metadata, coreauth.AttributeWeight)
 			} else {
 				if _, okNumber := value.(json.Number); !okNumber {
-					c.JSON(http.StatusBadRequest, gin.H{"error": "weight must be an integer"})
+					c.JSON(http.StatusBadRequest, web.H{"error": "weight must be an integer"})
 					return
 				}
 				weight, errWeight := credentialweight.ParseValue(value)
 				if errWeight != nil {
-					c.JSON(http.StatusBadRequest, gin.H{"error": errWeight.Error()})
+					c.JSON(http.StatusBadRequest, web.H{"error": errWeight.Error()})
 					return
 				}
 				targetAuth.Metadata[coreauth.AttributeWeight] = weight
 			}
 		} else if rootAuthFileField(fieldPath) == coreauth.AttributeWeight {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "weight does not support nested fields"})
+			c.JSON(http.StatusBadRequest, web.H{"error": "weight does not support nested fields"})
 			return
 		} else if fieldPath == "headers" {
 			applyAuthFileHeadersPatch(targetAuth, value)
 		} else if errSet := setAuthFileMetadataValue(targetAuth.Metadata, fieldPath, value); errSet != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": errSet.Error()})
+			c.JSON(http.StatusBadRequest, web.H{"error": errSet.Error()})
 			return
 		}
 		if root := rootAuthFileField(fieldPath); root != "" {
@@ -390,7 +390,7 @@ func (h *Handler) PatchAuthFileFields(c *gin.Context) {
 	}
 
 	if !changed {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "no fields to update"})
+		c.JSON(http.StatusBadRequest, web.H{"error": "no fields to update"})
 		return
 	}
 
@@ -398,7 +398,7 @@ func (h *Handler) PatchAuthFileFields(c *gin.Context) {
 
 	updatedAuth, err := h.authManager.Update(ctx, targetAuth)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to update auth: %v", err)})
+		c.JSON(http.StatusInternalServerError, web.H{"error": fmt.Sprintf("failed to update auth: %v", err)})
 		return
 	}
 	if h.postAuthPersistHook != nil {
@@ -407,12 +407,12 @@ func (h *Handler) PatchAuthFileFields(c *gin.Context) {
 			hookAuth = targetAuth
 		}
 		if errHook := h.postAuthPersistHook(ctx, hookAuth); errHook != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("post-auth persist hook failed: %v", errHook)})
+			c.JSON(http.StatusInternalServerError, web.H{"error": fmt.Sprintf("post-auth persist hook failed: %v", errHook)})
 			return
 		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	c.JSON(http.StatusOK, web.H{"status": "ok"})
 }
 
 func decodeAuthFileFieldValue(raw json.RawMessage) (any, error) {
