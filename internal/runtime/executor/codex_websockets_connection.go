@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -16,39 +15,30 @@ import (
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/util"
 	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/executor"
-	"github.com/router-for-me/CLIProxyAPI/v7/sdk/proxyutil"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/sjson"
-	"golang.org/x/net/proxy"
 )
 
 const (
 	codexResponsesWebsocketBetaHeaderValue = "responses_websockets=2026-02-06"
 	codexResponsesWebsocketIdleTimeout     = 5 * time.Minute
-	codexResponsesWebsocketHandshakeTO     = 30 * time.Second
+	codexResponsesWebsocketHandshakeTO     = helps.WebSocketHandshakeTimeout
 )
 
-func (e *CodexWebsocketsExecutor) dialCodexWebsocket(ctx context.Context, auth *cliproxyauth.Auth, wsURL string, headers http.Header) (*websocket.Conn, *websocketConnectionCloser, *http.Response, error) {
-	dialer := newProxyAwareWebsocketDialer(e.cfg, auth)
-	dialer.HandshakeTimeout = codexResponsesWebsocketHandshakeTO
-	dialer.EnableCompression = true
-	if ctx == nil {
-		ctx = context.Background()
+func (e *CodexWebsocketsExecutor) dialCodexWebsocket(ctx context.Context, auth *cliproxyauth.Auth, wsURL string, headers http.Header) (helps.WebSocketConn, *websocketConnectionCloser, *http.Response, error) {
+	dialer, err := helps.NewFingerprintWebSocketDialer(e.cfg, auth, helps.FingerprintCodex)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 	conn, resp, err := dialer.DialContext(ctx, wsURL, headers)
 	if err != nil {
 		cliproxyexecutor.MarkUpstreamAttempt(ctx)
 	}
 	closer := newWebsocketConnectionCloser(conn)
-	if conn != nil {
-		// Avoid gorilla/websocket flate tail validation issues on some upstreams/Go versions.
-		// Negotiating permessage-deflate is fine; we just don't compress outbound messages.
-		conn.EnableWriteCompression(false)
-	}
 	return conn, closer, resp, err
 }
 
-func writeWebsocketPayloadMessage(provider string, sess *codexWebsocketSession, conn *websocket.Conn, payload []byte) error {
+func writeWebsocketPayloadMessage(provider string, sess *codexWebsocketSession, conn helps.WebSocketConn, payload []byte) error {
 	provider = strings.TrimSpace(provider)
 	if provider == "" {
 		provider = "codex"
@@ -69,6 +59,12 @@ func writeWebsocketPayloadMessage(provider string, sess *codexWebsocketSession, 
 	} else {
 		errSend = conn.WriteMessage(websocket.TextMessage, payload)
 	}
+	if errSend != nil && sess != nil && sess.receivedActiveReply(conn) {
+		// A response proves the upstream accepted this attempt. Preserve it in
+		// the read channel instead of replaying after a concurrent socket close.
+		log.Debugf("%s websockets: upstream response arrived before write completed session=%s", provider, sessionID)
+		errSend = nil
+	}
 	if errSend != nil {
 		log.Warnf("%s websockets: write payload failed session=%s session_object=%s bytes=%d duration=%v err=%v", provider, sessionID, sessionKind, payloadBytes, time.Since(start), errSend)
 	} else {
@@ -77,11 +73,11 @@ func writeWebsocketPayloadMessage(provider string, sess *codexWebsocketSession, 
 	return errSend
 }
 
-func writeCodexWebsocketMessage(sess *codexWebsocketSession, conn *websocket.Conn, payload []byte) error {
+func writeCodexWebsocketMessage(sess *codexWebsocketSession, conn helps.WebSocketConn, payload []byte) error {
 	return writeWebsocketPayloadMessage("codex", sess, conn, payload)
 }
 
-func mapCodexWebsocketWriteError(sess *codexWebsocketSession, conn *websocket.Conn, err error) error {
+func mapCodexWebsocketWriteError(sess *codexWebsocketSession, conn helps.WebSocketConn, err error) error {
 	if err == nil || sess == nil || conn == nil {
 		return err
 	}
@@ -147,7 +143,7 @@ func buildCodexWebsocketRequestBody(body []byte) []byte {
 	return body
 }
 
-func readCodexWebsocketMessage(ctx context.Context, sess *codexWebsocketSession, conn *websocket.Conn, readCh chan codexWebsocketRead) (int, []byte, error) {
+func readCodexWebsocketMessage(ctx context.Context, sess *codexWebsocketSession, conn helps.WebSocketConn, readCh chan codexWebsocketRead) (int, []byte, error) {
 	if sess == nil {
 		if conn == nil {
 			return 0, nil, fmt.Errorf("codex websockets executor: websocket conn is nil")
@@ -182,66 +178,7 @@ func readCodexWebsocketMessage(ctx context.Context, sess *codexWebsocketSession,
 }
 
 func newProxyAwareWebsocketDialer(cfg *config.Config, auth *cliproxyauth.Auth) *websocket.Dialer {
-	dialer := &websocket.Dialer{
-		Proxy:             http.ProxyFromEnvironment,
-		HandshakeTimeout:  codexResponsesWebsocketHandshakeTO,
-		EnableCompression: true,
-		NetDialContext: (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}).DialContext,
-	}
-
-	proxyURL := ""
-	if auth != nil {
-		proxyURL = strings.TrimSpace(auth.ProxyURL)
-	}
-	if proxyURL == "" && cfg != nil {
-		proxyURL = strings.TrimSpace(cfg.ProxyURL)
-	}
-	if proxyURL == "" {
-		return dialer
-	}
-
-	setting, errParse := proxyutil.Parse(proxyURL)
-	if errParse != nil {
-		log.Errorf("codex websockets executor: %v", errParse)
-		return dialer
-	}
-
-	switch setting.Mode {
-	case proxyutil.ModeDirect:
-		dialer.Proxy = nil
-		return dialer
-	case proxyutil.ModeProxy:
-	default:
-		return dialer
-	}
-
-	switch setting.URL.Scheme {
-	case "socks5", "socks5h":
-		var proxyAuth *proxy.Auth
-		if setting.URL.User != nil {
-			username := setting.URL.User.Username()
-			password, _ := setting.URL.User.Password()
-			proxyAuth = &proxy.Auth{User: username, Password: password}
-		}
-		socksDialer, errSOCKS5 := proxy.SOCKS5("tcp", setting.URL.Host, proxyAuth, proxy.Direct)
-		if errSOCKS5 != nil {
-			log.Errorf("codex websockets executor: create SOCKS5 dialer failed: %v", errSOCKS5)
-			return dialer
-		}
-		dialer.Proxy = nil
-		dialer.NetDialContext = func(_ context.Context, network, addr string) (net.Conn, error) {
-			return socksDialer.Dial(network, addr)
-		}
-	case "http", "https":
-		dialer.Proxy = http.ProxyURL(setting.URL)
-	default:
-		log.Errorf("codex websockets executor: unsupported proxy scheme: %s", setting.URL.Scheme)
-	}
-
-	return dialer
+	return helps.NewProxyAwareWebSocketDialer(cfg, auth)
 }
 
 func buildCodexResponsesWebsocketURL(httpURL string) (string, error) {
