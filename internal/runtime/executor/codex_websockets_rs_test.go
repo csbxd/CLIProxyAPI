@@ -219,6 +219,16 @@ func TestCodexRSWebSocketRejectedHandshakeAndFallback(t *testing.T) {
 }
 
 func TestCodexRSWebSocketClose1009IsRequestScoped(t *testing.T) {
+	for _, drain := range []bool{true, false} {
+		name := "immediate TCP close"
+		if drain {
+			name = "drain upload"
+		}
+		t.Run(name, func(t *testing.T) { testCodexRSWebSocketClose1009(t, drain) })
+	}
+}
+
+func testCodexRSWebSocketClose1009(t *testing.T, drain bool) {
 	upgrader := websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}
 	var upgrades atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -234,7 +244,9 @@ func TestCodexRSWebSocketClose1009IsRequestScoped(t *testing.T) {
 		}
 		_, _ = io.CopyN(io.Discard, reader, 1024)
 		_ = conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(1009, "too big"), time.Now().Add(time.Second))
-		_, _ = io.Copy(io.Discard, reader)
+		if drain {
+			_, _ = io.Copy(io.Discard, reader)
+		}
 	}))
 	defer server.Close()
 	exec := NewCodexWebsocketsExecutor(&config.Config{SDKConfig: config.SDKConfig{DisableImageGeneration: config.DisableImageGenerationAll}})

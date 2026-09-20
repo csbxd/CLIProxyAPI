@@ -154,7 +154,16 @@ func (c *codexRSWebSocketConn) WriteMessage(kind int, payload []byte) error {
 	defer c.writeMu.Unlock()
 	ctx, finish := c.writeDeadline.begin(c.lifetime)
 	defer finish()
-	return c.operationError(ctx, c.conn.WriteMessage(ctx, codexws.MessageType(kind), payload), true)
+	err := c.conn.WriteMessage(ctx, codexws.MessageType(kind), payload)
+	return c.operationError(ctx, err, c.readDeadline.active())
+}
+
+func (c *codexRSWebSocketConn) resolveWriteError(err error) error {
+	var native *codexws.Error
+	if !errors.As(err, &native) || native.Kind != "closing" {
+		return err
+	}
+	return c.operationError(c.lifetime, err, true)
 }
 
 func (c *codexRSWebSocketConn) WriteControl(kind int, payload []byte, deadline time.Time) error {
@@ -179,10 +188,10 @@ func (c *codexRSWebSocketConn) operationError(ctx context.Context, err error, wa
 		return os.ErrDeadlineExceeded
 	}
 	var native *codexws.Error
-	if waitForClose && errors.As(err, &native) && native.Kind == "closing" && c.readDeadline.active() {
-		// The SDK may reject a concurrent data write before its reader returns
-		// the peer's Close. Let that reader publish the status (notably 1009)
-		// before the executor classifies the failed write for retry.
+	if waitForClose && errors.As(err, &native) && native.Kind == "closing" {
+		// A closing write failure (including a broken pipe/reset) can precede
+		// delivery of a queued peer Close. Let the background reader publish its
+		// terminal status before the executor considers replaying the request.
 		select {
 		case <-c.readTerminal:
 		case <-ctx.Done():
@@ -239,7 +248,7 @@ func (c *codexRSWebSocketConn) CloseHandler() func(int, string) error {
 	if c.closeHandler != nil {
 		return c.closeHandler
 	}
-	return func(int, string) error { return nil } // The SDK has already acknowledged Close.
+	return func(int, string) error { return nil } // The SDK has already attempted the Close acknowledgement.
 }
 func (c *codexRSWebSocketConn) Close() error {
 	c.once.Do(func() { c.cancel(); c.closeErr = errors.Join(c.conn.Close(), c.client.Close()) })

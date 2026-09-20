@@ -81,6 +81,7 @@ func mapCodexWebsocketWriteError(sess *codexWebsocketSession, conn helps.WebSock
 	if err == nil || sess == nil || conn == nil {
 		return err
 	}
+	err = helps.ResolveWebSocketWriteError(conn, err)
 	upstreamErr := sess.upstreamDisconnectError(conn)
 	var closeErr *websocket.CloseError
 	if !errors.As(upstreamErr, &closeErr) || closeErr.Code != websocket.CloseMessageTooBig {

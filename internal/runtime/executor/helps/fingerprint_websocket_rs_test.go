@@ -264,10 +264,56 @@ func TestCodexRSWebSocketCloseDuringWrite(t *testing.T) {
 	go func() { _, _, errRead := conn.ReadMessage(); readDone <- errRead }()
 	writeDone := make(chan error, 1)
 	go func() { writeDone <- conn.WriteMessage(websocket.TextMessage, bytes.Repeat([]byte("a"), 8<<20)) }()
-	for _, err := range []error{wsTestAwait(t, writeDone), wsTestAwait(t, readDone)} {
+	errWrite := wsTestAwait(t, writeDone)
+	if errWrite != nil {
+		errWrite = ResolveWebSocketWriteError(conn, errWrite)
+	}
+	errRead := wsTestAwait(t, readDone)
+	if errRead == nil {
+		t.Fatal("expected peer Close from reader")
+	}
+	for _, err := range []error{errWrite, errRead} {
+		// The kernel may accept the whole upload before the reader sees Close.
+		if err == nil {
+			continue
+		}
 		var closed *websocket.CloseError
 		if !errors.As(err, &closed) || closed.Code != 1009 {
 			t.Fatalf("close during write=%v", err)
+		}
+	}
+}
+
+func TestCodexRSWebSocketCloseBeforeReaderStarts(t *testing.T) {
+	clearCodexRSEnvironment(t)
+	server := wsFixture(t, func(conn *websocket.Conn) {
+		_, reader, err := conn.NextReader()
+		if err != nil {
+			return
+		}
+		if _, err := io.CopyN(io.Discard, reader, 1024); err != nil {
+			return
+		}
+		if err := conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(1009, "too big"), time.Now().Add(time.Second)); err != nil {
+			t.Error(err)
+		}
+	})
+	conn := nativeWSTestDial(t, t.Context(), server)
+	writeDone := make(chan error, 1)
+	go func() { writeDone <- conn.WriteMessage(websocket.TextMessage, bytes.Repeat([]byte("a"), 8<<20)) }()
+	errWrite := wsTestAwait(t, writeDone)
+	var native *codexws.Error
+	if !errors.As(errWrite, &native) || native.Kind != "closing" {
+		t.Fatalf("expected closing write error before starting reader: %v", errWrite)
+	}
+	resolved := make(chan error, 1)
+	go func() { resolved <- ResolveWebSocketWriteError(conn, errWrite) }()
+	readDone := make(chan error, 1)
+	go func() { _, _, err := conn.ReadMessage(); readDone <- err }()
+	for _, err := range []error{wsTestAwait(t, resolved), wsTestAwait(t, readDone)} {
+		var closed *websocket.CloseError
+		if !errors.As(err, &closed) || closed.Code != 1009 {
+			t.Fatalf("delayed reader lost peer close: %v", err)
 		}
 	}
 }

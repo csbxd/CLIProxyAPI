@@ -42,8 +42,8 @@ github.com/clipperhouse/uax29/v2 v2.5.0 h1:x7T0T4eTHDONxFJsL94uKNKPHrclyFI0lm7+w
 github.com/clipperhouse/uax29/v2 v2.5.0/go.mod h1:Wn1g7MK6OoeDT0vL+Q0SQLDz/KpfsVRgg6W7ihQeh4g=
 github.com/cloudflare/circl v1.6.3 h1:9GPOhQGF9MCYUeXyMYlqTR6a5gTrgR/fBLXvUgtVcg8=
 github.com/cloudflare/circl v1.6.3/go.mod h1:2eXP6Qfat4O/Yhh8BznvKnJ+uzEoTQ6jVKJRn81BiS4=
-github.com/csbxd/gocodex v0.0.0-20260920171618-a46cf42ad3ac h1:CHXCQgim/4kTo38L6LOt0tvO0/DyECTOX5kL3u1bJss=
-github.com/csbxd/gocodex v0.0.0-20260920171618-a46cf42ad3ac/go.mod h1:ObwOqutVZ+h+l+qNw+PepwbYhU3Y8fE6hovIGMowq4Q=
+github.com/csbxd/gocodex v0.0.0-20260920183451-ef59b17a7984 h1:dzGNFqaihZqv+TQcs3tcpj49i8xBVGWGXGWocj4+PX8=
+github.com/csbxd/gocodex v0.0.0-20260920183451-ef59b17a7984/go.mod h1:ObwOqutVZ+h+l+qNw+PepwbYhU3Y8fE6hovIGMowq4Q=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

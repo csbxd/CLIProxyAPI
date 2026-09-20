@@ -52,6 +52,17 @@ func WebSocketAutoPong(conn WebSocketConn) bool {
 	return ok && automatic.AutomaticPong()
 }
 
+// ResolveWebSocketWriteError lets a session's background reader finish receiving
+// a peer Close before classifying a failed write. Callers must have launched that
+// reader; it need not have entered ReadMessage yet. Closing the connection also
+// releases the wait. Backends without this capability return the original error.
+func ResolveWebSocketWriteError(conn WebSocketConn, err error) error {
+	if resolver, ok := conn.(interface{ resolveWriteError(error) error }); ok && err != nil {
+		return resolver.resolveWriteError(err)
+	}
+	return err
+}
+
 // NewFingerprintWebSocketDialer selects the backend from a profile and build
 // tags. codex_rs applies to Codex OAuth; other combinations retain Gorilla.
 func NewFingerprintWebSocketDialer(cfg *config.Config, auth *cliproxyauth.Auth, fingerprint Fingerprint) (WebSocketDialer, error) {
