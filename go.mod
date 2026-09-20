@@ -8,7 +8,7 @@ require (
 	github.com/charmbracelet/bubbles v1.0.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
-	github.com/csbxd/gocodex v0.0.0-20260920154914-4fcc18aaf0e0
+	github.com/csbxd/gocodex v0.0.0-20260920163031-1949d3a49ca4
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-git/go-git/v6 v6.0.0-alpha.4.0.20260520124234-0860a7d8a164
 	github.com/google/uuid v1.6.0
