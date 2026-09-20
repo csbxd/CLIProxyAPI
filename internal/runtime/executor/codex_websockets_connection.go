@@ -84,6 +84,11 @@ func mapCodexWebsocketWriteError(sess *codexWebsocketSession, conn helps.WebSock
 	err = helps.ResolveWebSocketWriteError(conn, err)
 	upstreamErr := sess.upstreamDisconnectError(conn)
 	var closeErr *websocket.CloseError
+	if !errors.As(upstreamErr, &closeErr) {
+		// The backend may publish its read-side terminal error before the
+		// session callback records it. Use the resolved error in that window.
+		upstreamErr = err
+	}
 	if !errors.As(upstreamErr, &closeErr) || closeErr.Code != websocket.CloseMessageTooBig {
 		return err
 	}

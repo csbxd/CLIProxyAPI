@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -86,7 +87,92 @@ func (d *gorillaFingerprintWebSocketDialer) DialContext(ctx context.Context, url
 	// Keep the existing inbound compression negotiation without compressing
 	// outbound messages (some upstreams reject Gorilla's flate tail).
 	conn.EnableWriteCompression(false)
-	return conn, response, err
+	return &gorillaWebSocketConn{Conn: conn, readTerminal: make(chan struct{}), readerStarted: make(chan struct{})}, response, err
+}
+
+// gorillaWebSocketConn records the read-side terminal error so a concurrent
+// failed upload can use a peer Close code instead of replaying the request.
+type gorillaWebSocketConn struct {
+	*websocket.Conn
+	readTerminal      chan struct{}
+	readTerminalOnce  sync.Once
+	readerStarted     chan struct{}
+	readerStartedOnce sync.Once
+	terminalMu        sync.Mutex
+	terminalErr       error
+}
+
+func (c *gorillaWebSocketConn) setTerminal(err error) {
+	c.terminalMu.Lock()
+	if c.terminalErr == nil {
+		c.terminalErr = err
+	}
+	c.terminalMu.Unlock()
+	c.readTerminalOnce.Do(func() { close(c.readTerminal) })
+}
+
+func (c *gorillaWebSocketConn) terminal() error {
+	c.terminalMu.Lock()
+	defer c.terminalMu.Unlock()
+	return c.terminalErr
+}
+
+func (c *gorillaWebSocketConn) ReadMessage() (int, []byte, error) {
+	if c.readerStarted != nil {
+		c.readerStartedOnce.Do(func() { close(c.readerStarted) })
+	}
+	kind, payload, err := c.Conn.ReadMessage()
+	if err != nil {
+		c.setTerminal(err)
+	}
+	return kind, payload, err
+}
+
+func (c *gorillaWebSocketConn) SetCloseHandler(handler func(int, string) error) {
+	c.Conn.SetCloseHandler(func(code int, text string) error {
+		c.setTerminal(&websocket.CloseError{Code: code, Text: text})
+		if handler != nil {
+			return handler(code, text)
+		}
+		return nil
+	})
+}
+
+func (c *gorillaWebSocketConn) resolveWriteError(err error) error {
+	if err == nil {
+		return nil
+	}
+	startup := time.NewTimer(time.Second)
+	defer startup.Stop()
+	if c.readerStarted != nil {
+		select {
+		case <-c.readTerminal:
+		case <-c.readerStarted:
+		case <-startup.C:
+			return err
+		}
+	}
+	if c.readerStarted == nil {
+		select {
+		case <-c.readTerminal:
+		case <-startup.C:
+			return err
+		}
+	}
+	select {
+	case <-c.readTerminal:
+	case <-startup.C:
+		return err
+	}
+	if terminal := c.terminal(); terminal != nil {
+		return terminal
+	}
+	return err
+}
+
+func (c *gorillaWebSocketConn) Close() error {
+	c.setTerminal(net.ErrClosed)
+	return c.Conn.Close()
 }
 
 // NewProxyAwareWebSocketDialer preserves the existing Gorilla proxy policy.
