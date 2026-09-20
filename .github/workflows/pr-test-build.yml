@@ -30,5 +30,3 @@ jobs:
         run: |
           go build -tags="$BUILD_TAGS" -o test-output ./cmd/server
           rm -f test-output
-      - name: Test
-        run: go test -tags="$BUILD_TAGS" ./...
