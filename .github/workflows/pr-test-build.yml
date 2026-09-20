@@ -10,6 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         tags: ["", "utls", "codex_rs", "codex_rs,utls"]
     env:
@@ -29,5 +30,5 @@ jobs:
         run: |
           go build -tags="$BUILD_TAGS" -o test-output ./cmd/server
           rm -f test-output
-      - name: Test fingerprint HTTP transports
-        run: go test -tags="$BUILD_TAGS" -run '^(TestFingerprintHTTPClient|TestCodexRS|TestCodexExecutor|TestClaude|TestUsageReporterTrackHTTPClient)' ./internal/runtime/executor/helps ./internal/runtime/executor
+      - name: Test
+        run: go test -tags="$BUILD_TAGS" ./...
