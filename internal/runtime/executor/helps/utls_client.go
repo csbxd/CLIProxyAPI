@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"strings"
 	"sync"
-	"time"
 
 	tls "github.com/refraction-networking/utls"
 	internalcache "github.com/router-for-me/CLIProxyAPI/v7/internal/cache"
@@ -364,11 +363,9 @@ func (f *fallbackRoundTripper) RoundTrip(req *http.Request) (*http.Response, err
 	return f.fallback.RoundTrip(req)
 }
 
-// NewUtlsHTTPClient creates an HTTP client using provider-specific TLS
-// fingerprints for protected hosts. It uses Claude Code's Node/OpenSSL profile
-// for Anthropic and a Chrome profile for ChatGPT, with a standard-transport
-// fallback for other hosts.
-func NewUtlsHTTPClient(ctx context.Context, cfg *config.Config, auth *cliproxyauth.Auth, timeout time.Duration) *http.Client {
+// newUTLSFingerprintHTTPClient enables only the requested provider's TLS profile
+// on its protected hosts, with standard HTTP for other destinations.
+func newUTLSFingerprintHTTPClient(ctx context.Context, cfg *config.Config, auth *cliproxyauth.Auth, fingerprint Fingerprint) *http.Client {
 	var proxyURL string
 	if auth != nil {
 		proxyURL = strings.TrimSpace(auth.ProxyURL)
@@ -382,28 +379,28 @@ func NewUtlsHTTPClient(ctx context.Context, cfg *config.Config, auth *cliproxyau
 		ctxRoundTripper, _ = ctx.Value("cliproxy.roundtripper").(http.RoundTripper)
 	}
 
-	var chromeRT http.RoundTripper = newUtlsRoundTripper(proxyURL)
-	var anthropicRT http.RoundTripper = cachedClaudeCodeRoundTripper(proxyURL)
 	var standardTransport http.RoundTripper = http.DefaultTransport
 	if proxyURL != "" {
 		if transport := buildProxyTransport(proxyURL); transport != nil {
 			standardTransport = transport
 		}
-	} else if ctxRoundTripper != nil {
-		chromeRT = ctxRoundTripper
-		anthropicRT = ctxRoundTripper
-		standardTransport = ctxRoundTripper
+	}
+	chromeRT, anthropicRT := standardTransport, standardTransport
+	switch fingerprint {
+	case FingerprintCodex:
+		chromeRT = newUtlsRoundTripper(proxyURL)
+	case FingerprintClaude:
+		anthropicRT = cachedClaudeCodeRoundTripper(proxyURL)
+	}
+	if proxyURL == "" && ctxRoundTripper != nil {
+		chromeRT, anthropicRT, standardTransport = ctxRoundTripper, ctxRoundTripper, ctxRoundTripper
 	}
 
-	client := &http.Client{
+	return &http.Client{
 		Transport: &fallbackRoundTripper{
 			anthropic: anthropicRT,
 			chrome:    chromeRT,
 			fallback:  standardTransport,
 		},
 	}
-	if timeout > 0 {
-		client.Timeout = timeout
-	}
-	return client
 }

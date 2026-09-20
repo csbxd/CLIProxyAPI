@@ -242,7 +242,10 @@ func (e *ClaudeExecutor) countTokensUpstream(ctx context.Context, auth *cliproxy
 		AuthValue: authValue,
 	})
 
-	httpClient := helps.NewUtlsHTTPClient(ctx, e.cfg, auth, 0)
+	httpClient, err := helps.NewFingerprintHTTPClient(ctx, e.cfg, auth, helps.FingerprintClaude)
+	if err != nil {
+		return cliproxyexecutor.Response{}, err
+	}
 	resp, err := doClaudeUpstreamRequest(httpClient, httpReq)
 	if err != nil {
 		helps.RecordAPIResponseError(ctx, e.cfg, err)

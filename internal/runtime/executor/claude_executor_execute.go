@@ -326,7 +326,10 @@ func (e *ClaudeExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, r
 		AuthValue: authValue,
 	})
 
-	httpClient := helps.NewUtlsHTTPClient(ctx, e.cfg, auth, 0)
+	httpClient, err := helps.NewFingerprintHTTPClient(ctx, e.cfg, auth, helps.FingerprintClaude)
+	if err != nil {
+		return resp, wrapClaudeFastRequestError(fastRequest, 0, err)
+	}
 	httpClient = reporter.TrackHTTPClient(httpClient)
 	httpResp, err := doClaudeUpstreamRequest(httpClient, httpReq)
 	if err != nil {

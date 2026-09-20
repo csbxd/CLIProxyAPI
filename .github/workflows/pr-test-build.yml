@@ -9,6 +9,13 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        tags: ["", "utls", "codex_rs", "codex_rs,utls"]
+    env:
+      CGO_ENABLED: '1'
+      BUILD_TAGS: ${{ matrix.tags }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,5 +28,5 @@ jobs:
         run: bash .github/scripts/refresh-model-catalogs.sh
       - name: Build
         run: |
-          go build -o test-output ./cmd/server
+          go build -tags="$BUILD_TAGS" -o test-output ./cmd/server
           rm -f test-output

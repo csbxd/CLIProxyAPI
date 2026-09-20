@@ -13,12 +13,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	internalcache "github.com/router-for-me/CLIProxyAPI/v7/internal/cache"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/runtime/executor/helps"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/executor"
 	sdkconfig "github.com/router-for-me/CLIProxyAPI/v7/sdk/config"
@@ -2756,7 +2757,7 @@ func TestCodexWebsockets_KeepalivePingDuringUpload_WithSession(t *testing.T) {
 	inWriteHook := make(chan struct{})
 	pongDeliveredDuringWrite := make(chan struct{})
 
-	testWebsocketWritePayloadHook = func(conn *websocket.Conn) {
+	testWebsocketWritePayloadHook = func(conn helps.WebSocketConn) {
 		close(inWriteHook)
 		// Wait until server confirms pong was received before allowing write to finish.
 		select {
@@ -2856,7 +2857,7 @@ func TestCodexWebsockets_KeepalivePingDuringUpload_Sessionless(t *testing.T) {
 	inWriteHook := make(chan struct{})
 	pongDeliveredDuringWrite := make(chan struct{})
 
-	testWebsocketWritePayloadHook = func(conn *websocket.Conn) {
+	testWebsocketWritePayloadHook = func(conn helps.WebSocketConn) {
 		close(inWriteHook)
 		select {
 		case <-pongDeliveredDuringWrite:
@@ -2948,7 +2949,7 @@ func TestCodexWebsockets_KeepalivePingDuringUpload_NonstreamSessionless(t *testi
 	inWriteHook := make(chan struct{})
 	pongDeliveredDuringWrite := make(chan struct{})
 
-	testWebsocketWritePayloadHook = func(conn *websocket.Conn) {
+	testWebsocketWritePayloadHook = func(conn helps.WebSocketConn) {
 		close(inWriteHook)
 		select {
 		case <-pongDeliveredDuringWrite:
@@ -3362,7 +3363,7 @@ func TestCodexWebsockets_SendErrorLogsSessionObject(t *testing.T) {
 	defer server.Close()
 
 	// Deterministically cause send error by expiring write deadline right before writing.
-	testWebsocketWritePayloadHook = func(conn *websocket.Conn) {
+	testWebsocketWritePayloadHook = func(conn helps.WebSocketConn) {
 		_ = conn.SetWriteDeadline(time.Now().Add(-time.Second))
 	}
 	defer func() { testWebsocketWritePayloadHook = nil }()

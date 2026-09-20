@@ -14,6 +14,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/runtime/executor/helps"
 	_ "github.com/router-for-me/CLIProxyAPI/v7/internal/translator"
 	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/executor"
@@ -2191,7 +2192,7 @@ func TestXAIWebsockets_KeepalivePingDuringUpload_WithSession(t *testing.T) {
 	inWriteHook := make(chan struct{})
 	pongDeliveredDuringWrite := make(chan struct{})
 
-	testWebsocketWritePayloadHook = func(conn *websocket.Conn) {
+	testWebsocketWritePayloadHook = func(conn helps.WebSocketConn) {
 		close(inWriteHook)
 		select {
 		case <-pongDeliveredDuringWrite:
@@ -2287,7 +2288,7 @@ func TestXAIWebsockets_KeepalivePingDuringUpload_Sessionless(t *testing.T) {
 	inWriteHook := make(chan struct{})
 	pongDeliveredDuringWrite := make(chan struct{})
 
-	testWebsocketWritePayloadHook = func(conn *websocket.Conn) {
+	testWebsocketWritePayloadHook = func(conn helps.WebSocketConn) {
 		close(inWriteHook)
 		select {
 		case <-pongDeliveredDuringWrite:
