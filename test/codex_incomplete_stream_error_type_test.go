@@ -9,10 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
 	runtimeexecutor "github.com/router-for-me/CLIProxyAPI/v7/internal/runtime/executor"
+	web "github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	_ "github.com/router-for-me/CLIProxyAPI/v7/internal/translator"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/api/handlers"
 	openaihandlers "github.com/router-for-me/CLIProxyAPI/v7/sdk/api/handlers/openai"
@@ -67,9 +67,9 @@ func TestCodexIncompleteStreamIsNotTypedAsInvalidRequest(t *testing.T) {
 		t.Fatal(errRegister)
 	}
 
-	gin.SetMode(gin.TestMode)
+	web.SetMode(web.TestMode)
 	recorder := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(recorder)
+	c, _ := web.CreateTestContext(recorder)
 	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses",
 		strings.NewReader(fmt.Sprintf(`{"model":%q,"input":"hello","stream":true}`, model)))
 	c.Request.Header.Set("Content-Type", "application/json")

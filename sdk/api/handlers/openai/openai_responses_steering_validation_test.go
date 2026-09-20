@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
 	runtimeexecutor "github.com/router-for-me/CLIProxyAPI/v7/internal/runtime/executor"
+	web "github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/api/handlers"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 	"github.com/tidwall/gjson"
@@ -79,7 +79,7 @@ func TestResponsesSteeringLocalValidationRecovery(t *testing.T) {
 	registry.GetGlobalRegistry().RegisterClient(authID, "codex", []*registry.ModelInfo{{ID: model}})
 	defer registry.GetGlobalRegistry().UnregisterClient(authID)
 	handler := NewOpenAIResponsesAPIHandler(handlers.NewBaseAPIHandlers(&cfg.SDKConfig, manager))
-	router := gin.New()
+	router := web.New()
 	router.GET("/v1/responses", handler.ResponsesWebsocket)
 	downstream := httptest.NewServer(router)
 	defer downstream.Close()

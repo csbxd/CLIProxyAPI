@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 )
 
 func TestPatchClaudeKeyFingerprintProfile(t *testing.T) {
@@ -147,7 +147,7 @@ func TestPatchClaudeKeyCloak(t *testing.T) {
 
 	// 1. Partial patch: only update strict-mode to false. mode: always and cache-user-id: true must be preserved.
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPatch, "/v0/management/claude-api-key",
 		strings.NewReader(`{"index":0,"value":{"cloak":{"strict-mode":false}}}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
@@ -183,7 +183,7 @@ func TestPatchClaudeKeyCloak(t *testing.T) {
 
 	// 2. Partial patch: update cache-user-id to false
 	rec = httptest.NewRecorder()
-	ctx, _ = gin.CreateTestContext(rec)
+	ctx, _ = web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPatch, "/v0/management/claude-api-key",
 		strings.NewReader(`{"index":0,"value":{"cloak":{"cache-user-id":false}}}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
@@ -207,7 +207,7 @@ func TestPatchClaudeKeyCloak(t *testing.T) {
 
 	// 3. Rejects invalid cloak JSON
 	rec = httptest.NewRecorder()
-	ctx, _ = gin.CreateTestContext(rec)
+	ctx, _ = web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPatch, "/v0/management/claude-api-key",
 		strings.NewReader(`{"index":0,"value":{"cloak":"invalid-string"}}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
@@ -218,7 +218,7 @@ func TestPatchClaudeKeyCloak(t *testing.T) {
 
 	// 4. Patch cloak to null (clear cloak)
 	rec = httptest.NewRecorder()
-	ctx, _ = gin.CreateTestContext(rec)
+	ctx, _ = web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPatch, "/v0/management/claude-api-key",
 		strings.NewReader(`{"index":0,"value":{"cloak":null}}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
@@ -281,7 +281,7 @@ func TestPatchClaudeKeyDoesNotInheritModeWhenIdentityChanged(t *testing.T) {
 			h := &Handler{cfg: cfg, configFilePath: configFile}
 
 			rec := httptest.NewRecorder()
-			ctx, _ := gin.CreateTestContext(rec)
+			ctx, _ := web.CreateTestContext(rec)
 			ctx.Request = httptest.NewRequest(http.MethodPatch, "/v0/management/claude-api-key", strings.NewReader(tc.patch))
 			ctx.Request.Header.Set("Content-Type", "application/json")
 			h.PatchClaudeKey(ctx)
@@ -324,7 +324,7 @@ func TestPutClaudeKeysCloakPersistence(t *testing.T) {
 
 	// PUT with updated cloak where mode is empty (preserves original mode), strict-mode is false, cache-user-id is false
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPut, "/v0/management/claude-api-key",
 		strings.NewReader(`[{"api-key":"sk-ant-test","cloak":{"mode":"","strict-mode":false,"cache-user-id":false}}]`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
@@ -356,7 +356,7 @@ func TestPutClaudeKeysCloakPersistence(t *testing.T) {
 
 	// Verify GET returns preserved mode and updated false values so the frontend continues to display the original value
 	getRec := httptest.NewRecorder()
-	getCtx, _ := gin.CreateTestContext(getRec)
+	getCtx, _ := web.CreateTestContext(getRec)
 	getCtx.Request = httptest.NewRequest(http.MethodGet, "/v0/management/claude-api-key", nil)
 	h.GetClaudeKeys(getCtx)
 	if getRec.Code != http.StatusOK {
@@ -402,7 +402,7 @@ func TestPutClaudeKeysPreservesModeByCredentialIdentity(t *testing.T) {
 	// Submit PUT where key-a is removed, and key-b is sent with empty mode.
 	// key-b must retain its own "never" mode, not inherit key-a's "always".
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPut, "/v0/management/claude-api-key",
 		strings.NewReader(`[{"api-key":"key-b","cloak":{"mode":""}}]`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
@@ -462,7 +462,7 @@ func TestPutClaudeKeysRealFrontendPayload(t *testing.T) {
 	// Real frontend PUT request when user clears mode and unchecks cache-user-id:
 	// mode is omitted, cache-user-id is omitted, strict-mode is false.
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPut, "/v0/management/claude-api-key",
 		strings.NewReader(`[{"api-key":"sk-ant-test","cloak":{"strict-mode":false}}]`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
@@ -491,7 +491,7 @@ func TestPutClaudeKeysRealFrontendPayload(t *testing.T) {
 
 	// Verify GET response
 	getRec := httptest.NewRecorder()
-	getCtx, _ := gin.CreateTestContext(getRec)
+	getCtx, _ := web.CreateTestContext(getRec)
 	getCtx.Request = httptest.NewRequest(http.MethodGet, "/v0/management/claude-api-key", nil)
 	h.GetClaudeKeys(getCtx)
 	if getRec.Code != http.StatusOK {
@@ -540,7 +540,7 @@ func TestPutClaudeKeysPreservesModeWithDifferentPrefix(t *testing.T) {
 
 	// Update team2 with empty mode. It must retain its own "never" mode and not team1's "always".
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPut, "/v0/management/claude-api-key",
 		strings.NewReader(`[{"api-key":"shared-key","prefix":"team1","cloak":{"mode":"always"}},{"api-key":"shared-key","prefix":"team2","cloak":{"mode":""}}]`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
@@ -589,7 +589,7 @@ func TestPutClaudeKeysAuthIndexCannotBypassStrictTupleIsolation(t *testing.T) {
 	// Strict tuple isolation must ensure key-b preserves its own mode ("never") and does not inherit key-a's mode.
 	payload := `[{"api-key":"key-a","cloak":{"mode":"always"}},{"api-key":"key-b","auth-index":"index-a","cloak":{"mode":""}}]`
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPut, "/v0/management/claude-api-key",
 		strings.NewReader(payload))
 	ctx.Request.Header.Set("Content-Type", "application/json")
@@ -633,7 +633,7 @@ func TestPutClaudeKeysDoesNotInheritModeForNewCredential(t *testing.T) {
 	// new-key must NOT inherit old-key's "never" mode; its mode must remain empty.
 	payload := `[{"api-key":"new-key","base-url":"https://new.example.com","cloak":{"mode":""}}]`
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPut, "/v0/management/claude-api-key",
 		strings.NewReader(payload))
 	ctx.Request.Header.Set("Content-Type", "application/json")
@@ -691,7 +691,7 @@ func TestPutClaudeKeysAmbiguousCredentialsDoNotInheritMode(t *testing.T) {
 	// Since matching is ambiguous between the two duplicates, it must not guess or inherit.
 	payload := `[{"api-key":"shared-key","cloak":{"mode":""}}]`
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPut, "/v0/management/claude-api-key",
 		strings.NewReader(payload))
 	ctx.Request.Header.Set("Content-Type", "application/json")
@@ -735,7 +735,7 @@ func TestPutClaudeKeysNewCredentialWithDifferentPrefixDoesNotInheritMode(t *test
 	// team1 must retain its "never" mode, and newly added team2 must NOT inherit team1's "never" mode.
 	payload := `[{"api-key":"shared-key","prefix":"team1","cloak":{"mode":""}},{"api-key":"shared-key","prefix":"team2","cloak":{"mode":""}}]`
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPut, "/v0/management/claude-api-key",
 		strings.NewReader(payload))
 	ctx.Request.Header.Set("Content-Type", "application/json")
@@ -779,7 +779,7 @@ func TestPutClaudeKeysOmittedCloakPreservesExistingMode(t *testing.T) {
 	// PUT sends the credential without a cloak block. Existing mode: always must be preserved.
 	payload := `[{"api-key":"sk-ant-test"}]`
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPut, "/v0/management/claude-api-key",
 		strings.NewReader(payload))
 	ctx.Request.Header.Set("Content-Type", "application/json")
@@ -816,7 +816,7 @@ func TestPatchClaudeKeyPriority(t *testing.T) {
 	h := &Handler{cfg: cfg, configFilePath: configFile}
 
 	rec := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(rec)
+	ctx, _ := web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPatch, "/v0/management/claude-api-key",
 		strings.NewReader(`{"index":1,"value":{"priority":20}}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
@@ -840,7 +840,7 @@ func TestPatchClaudeKeyPriority(t *testing.T) {
 
 	// Verify GET returns the updated priority with structured unmarshaling
 	getRec := httptest.NewRecorder()
-	getCtx, _ := gin.CreateTestContext(getRec)
+	getCtx, _ := web.CreateTestContext(getRec)
 	getCtx.Request = httptest.NewRequest(http.MethodGet, "/v0/management/claude-api-key", nil)
 	h.GetClaudeKeys(getCtx)
 
@@ -862,7 +862,7 @@ func TestPatchClaudeKeyPriority(t *testing.T) {
 
 	// Omitting priority must preserve existing non-zero value (20)
 	rec = httptest.NewRecorder()
-	ctx, _ = gin.CreateTestContext(rec)
+	ctx, _ = web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPatch, "/v0/management/claude-api-key",
 		strings.NewReader(`{"index":1,"value":{"prefix":"team-test"}}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
@@ -880,7 +880,7 @@ func TestPatchClaudeKeyPriority(t *testing.T) {
 
 	// Reset priority to 0 explicitly
 	rec = httptest.NewRecorder()
-	ctx, _ = gin.CreateTestContext(rec)
+	ctx, _ = web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPatch, "/v0/management/claude-api-key",
 		strings.NewReader(`{"index":1,"value":{"priority":0}}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
@@ -895,7 +895,7 @@ func TestPatchClaudeKeyPriority(t *testing.T) {
 
 	// Invalid priority type returns 400
 	rec = httptest.NewRecorder()
-	ctx, _ = gin.CreateTestContext(rec)
+	ctx, _ = web.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPatch, "/v0/management/claude-api-key",
 		strings.NewReader(`{"index":1,"value":{"priority":"invalid"}}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
