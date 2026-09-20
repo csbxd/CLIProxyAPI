@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/stdlibhttp"
 )
 
 func parseCredentialWeightPatch(raw json.RawMessage) (*int, error) {
@@ -745,7 +745,7 @@ func (h *Handler) PatchClaudeKey(c *web.Context) {
 			}
 			var p cloakPatch
 			if errCloak := json.Unmarshal(body.Value.Cloak, &p); errCloak != nil {
-				c.JSON(400, gin.H{"error": "invalid cloak config"})
+				c.JSON(400, web.H{"error": "invalid cloak config"})
 				return
 			}
 			if entry.Cloak == nil || identityChanged {

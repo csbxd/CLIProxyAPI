@@ -35,7 +35,7 @@ func (e *codexDuplexConnectionError) IsRequestScoped() bool { return true }
 // in this path. Only the upstream can take ownership of a steering submission.
 func (e *CodexWebsocketsExecutor) streamCodexDuplex(
 	ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options,
-	sess *codexWebsocketSession, conn *websocket.Conn, readCh chan codexWebsocketRead,
+	sess *codexWebsocketSession, conn helps.WebSocketConn, readCh chan codexWebsocketRead,
 	input <-chan cliproxyexecutor.WebsocketInput, initial *codexWebsocketPrepared,
 	initialReporter *helps.UsageReporter, headers http.Header, unlock func(),
 ) *cliproxyexecutor.StreamResult {
