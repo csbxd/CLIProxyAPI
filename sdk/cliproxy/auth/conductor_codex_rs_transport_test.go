@@ -103,6 +103,7 @@ func TestCodexRSNonTransportErrorsDoNotBecomeRetryable(t *testing.T) {
 		&codexhttp.Error{Kind: "invalid_input", Message: "invalid proxy configuration"},
 		&codexhttp.Error{Kind: "request", Message: "certificate verify failed"},
 		&Error{HTTPStatus: http.StatusUnauthorized, Message: "invalid credential"},
+		&Error{HTTPStatus: http.StatusUnauthorized, Message: "unexpected EOF: connection closed before message completed"},
 	} {
 		if isTransientTransportError(err) || isRequestRetryRoundError(err) {
 			t.Errorf("non-transport error became eligible for transport retry: %T %v", err, err)
